@@ -1,5 +1,10 @@
 package org.readium.r2.navigator
 
+/**
+Copyright 2018 Readium Foundation. All rights reserved.
+Use of this source code is governed by a BSD-style license which is detailed in the LICENSE file present in the project repository where this source code is maintained.
+ */
+
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -21,7 +26,6 @@ import org.readium.r2.navigator.pager.R2PagerAdapter
 import org.readium.r2.navigator.pager.R2ViewPager
 import org.readium.r2.shared.Publication
 import org.readium.r2.shared.drm.DRMMModel
-
 
 class R2EpubActivity : AppCompatActivity() {
 
