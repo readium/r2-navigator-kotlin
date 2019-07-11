@@ -75,15 +75,21 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
     @android.webkit.JavascriptInterface
     open fun scrollRight() {
         uiScope.launch {
-            if (activity.supportActionBar!!.isShowing && listener.allowToggleActionBar) {
-                listener.resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
-                        or View.SYSTEM_UI_FLAG_IMMERSIVE)
+            if (listener.allowToggleActionBar) {
+                activity.supportActionBar?.let {
+                    if (it.isShowing) {
+                        listener.resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
+                                or View.SYSTEM_UI_FLAG_IMMERSIVE)
+                    }
+                }
             }
+
             val scrollMode = listener.preferences.getBoolean(SCROLL_REF, false)
+
             if (scrollMode) {
                 if (listener.publication.metadata.direction == "rtl") {
                     this@R2BasicWebView.evaluateJavascript("scrollRightRTL();") { result ->
@@ -106,14 +112,19 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
     @android.webkit.JavascriptInterface
     open fun scrollLeft() {
         uiScope.launch {
-            if (activity.supportActionBar!!.isShowing && listener.allowToggleActionBar) {
-                listener.resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
-                        or View.SYSTEM_UI_FLAG_IMMERSIVE)
+            if (listener.allowToggleActionBar) {
+                activity.supportActionBar?.let {
+                    if (it.isShowing) {
+                        listener.resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
+                                or View.SYSTEM_UI_FLAG_IMMERSIVE)
+                    }
+                }
             }
+
             val scrollMode = listener.preferences.getBoolean(SCROLL_REF, false)
             if (scrollMode) {
                 if (listener.publication.metadata.direction == "rtl") {
