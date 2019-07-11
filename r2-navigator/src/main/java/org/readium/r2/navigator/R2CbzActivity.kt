@@ -18,27 +18,31 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.extensions.layoutDirectionIsRTL
+import org.readium.r2.navigator.interfaces.R2EpubPageFragmentListener
 import org.readium.r2.navigator.pager.R2PagerAdapter
 import org.readium.r2.navigator.pager.R2ViewPager
+import org.readium.r2.shared.Locations
 import org.readium.r2.shared.Publication
 import kotlin.coroutines.CoroutineContext
 
 
-class R2CbzActivity : AppCompatActivity(), CoroutineScope {
+class R2CbzActivity : AppCompatActivity(), CoroutineScope, R2EpubPageFragmentListener {
     /**
      * Context of this scope.
      */
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main
 
-    private lateinit var preferences: SharedPreferences
-    lateinit var resourcePager: R2ViewPager
-    var resources = arrayListOf<String>()
+    override lateinit var preferences: SharedPreferences
+    override lateinit var resourcePager: R2ViewPager
+    override lateinit var publication: Publication
+    override lateinit var publicationIdentifier: String
+    override var allowToggleActionBar = true
 
     private lateinit var publicationPath: String
-    private lateinit var publication: Publication
     private lateinit var cbzName: String
-    private lateinit var publicationIdentifier: String
+
+    var resources = arrayListOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,7 +63,7 @@ class R2CbzActivity : AppCompatActivity(), CoroutineScope {
 
         val index = preferences.getInt("$publicationIdentifier-document", 0)
 
-        val adapter = R2PagerAdapter(supportFragmentManager, resources, publication.metadata.title, Publication.TYPE.CBZ, publicationPath)
+        val adapter = R2PagerAdapter(supportFragmentManager, resources, publication.metadata.title, Publication.TYPE.CBZ, publicationPath, this)
 
         resourcePager.adapter = adapter
 
@@ -94,7 +98,53 @@ class R2CbzActivity : AppCompatActivity(), CoroutineScope {
         preferences.edit().putInt("$publicationIdentifier-document", documentIndex).apply()
     }
 
-    fun nextResource(v: View? = null) {
+    /**
+     * storeProgression() : save in the preference the last progression in the spine item
+     */
+    override fun storeProgression(locations: Locations?) {
+        //
+    }
+
+    /**
+     * onPageChanged() : when page changed inside webview
+     */
+    override fun onPageChanged(index: Int, numPages: Int, url: String?) {
+        // optional
+    }
+
+    /**
+     * onPageEnded() : when page ended inside webview
+     */
+    override fun onPageEnded(end: Boolean) {
+        // optional
+    }
+
+    /**
+     * toggleActionBar() : toggle actionbar when touch center
+     */
+    override fun toggleActionBar() {
+        launch {
+            if (allowToggleActionBar) {
+                if (supportActionBar!!.isShowing) {
+                    resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
+                            or View.SYSTEM_UI_FLAG_IMMERSIVE)
+                } else {
+                    resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
+                }
+            }
+        }
+    }
+
+    /**
+     * nextResource() : return next resource
+     */
+    override fun nextResource(smoothScroll: Boolean) {
         launch {
             if (layoutDirectionIsRTL()) {
                 // The view has RTL layout
@@ -106,7 +156,10 @@ class R2CbzActivity : AppCompatActivity(), CoroutineScope {
         }
     }
 
-    fun previousResource(v: View? = null) {
+    /**
+     * nextResource() : return previous resource
+     */
+    override fun previousResource(smoothScroll: Boolean) {
         launch {
             if (layoutDirectionIsRTL()) {
                 // The view has RTL layout
@@ -119,21 +172,5 @@ class R2CbzActivity : AppCompatActivity(), CoroutineScope {
         }
     }
 
-    fun toggleActionBar(v: View? = null) {
-        launch {
-            if (supportActionBar!!.isShowing) {
-                resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
-                        or View.SYSTEM_UI_FLAG_IMMERSIVE)
-            } else {
-                resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
-            }
-        }
-    }
 }
 

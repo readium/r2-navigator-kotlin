@@ -14,7 +14,6 @@ import android.util.AttributeSet
 
 class R2ViewPager : R2RTLViewPager {
 
-
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet) : super(context, attrs)
 
@@ -25,5 +24,5 @@ class R2ViewPager : R2RTLViewPager {
     override fun setCurrentItem(item: Int) {
         super.setCurrentItem(item, false)
     }
-    
+
 }

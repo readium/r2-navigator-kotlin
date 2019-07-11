@@ -43,7 +43,7 @@ class R2WebView(context: Context, attrs: AttributeSet) : R2BasicWebView(context,
         uiScope.launch {
             if (mCurItem < numPages - 1) {
                 mCurItem++
-                activity.onPageChanged(mCurItem + 1, numPages, url)
+                listener.onPageChanged(mCurItem + 1, numPages, url)
             }
         }
     }
@@ -54,7 +54,7 @@ class R2WebView(context: Context, attrs: AttributeSet) : R2BasicWebView(context,
         uiScope.launch {
             if (mCurItem > 0) {
                 mCurItem--
-                activity.onPageChanged(mCurItem + 1, numPages, url)
+                listener.onPageChanged(mCurItem + 1, numPages, url)
             }
         }
     }
@@ -313,7 +313,7 @@ class R2WebView(context: Context, attrs: AttributeSet) : R2BasicWebView(context,
         }
 
         if (post) {
-            activity.onPageChanged(item + 1, numPages, url)
+            listener.onPageChanged(item + 1, numPages, url)
         }
 
 
@@ -1007,15 +1007,9 @@ class R2WebView(context: Context, attrs: AttributeSet) : R2BasicWebView(context,
         constructor() : super(MATCH_PARENT, MATCH_PARENT)
 
         constructor(context: Context, attrs: AttributeSet) : super(context, attrs) {
-
             val a = context.obtainStyledAttributes(attrs, LAYOUT_ATTRS)
             gravity = a.getInteger(0, Gravity.TOP)
             a.recycle()
         }
     }
-}
-
-interface PageCallback {
-    fun onPageChanged(pageIndex: Int, totalPages: Int, url: String)
-    fun onPageEnded(end: Boolean)
 }

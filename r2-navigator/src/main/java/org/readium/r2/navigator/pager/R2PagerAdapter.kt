@@ -12,10 +12,11 @@ package org.readium.r2.navigator.pager
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import org.readium.r2.navigator.interfaces.R2EpubPageFragmentListener
 import org.readium.r2.shared.Publication
 
 
-class R2PagerAdapter(fm: FragmentManager, private val resources: List<Any>, private val title: String, private val type: Publication.TYPE, private val publicationPath: String) : R2FragmentPagerAdapter(fm) {
+class R2PagerAdapter(fm: FragmentManager, private val resources: List<Any>, private val title: String, private val type: Publication.TYPE, private val publicationPath: String, private var listener: R2EpubPageFragmentListener) : R2FragmentPagerAdapter(fm) {
 
     private var currentFragment: Fragment? = null
     private var previousFragment: Fragment? = null
@@ -46,19 +47,28 @@ class R2PagerAdapter(fm: FragmentManager, private val resources: List<Any>, priv
             when (type) {
                 Publication.TYPE.EPUB, Publication.TYPE.WEBPUB, Publication.TYPE.AUDIO -> {
                     val single = resources[position] as Pair<Int, String>
-                    R2EpubPageFragment.newInstance(single.second, title)
+                    val fragment = R2EpubPageFragment.newInstance(single.second, title)
+                    fragment.listener = listener
+                    fragment
                 }
+
                 Publication.TYPE.FXL -> {
                     if (resources[position] is Triple<*, *, *>) {
                         val double = resources[position] as Triple<Int, String, String>
-                        R2FXLPageFragment.newInstance(title, double.second, double.third)
-                    }
-                    else {
+                        val fragment = R2FXLPageFragment.newInstance(title, double.second, double.third)
+                        fragment.listener = listener
+                        fragment
+                    } else {
                         val single = resources[position] as Pair<Int, String>
-                        R2FXLPageFragment.newInstance(title, single.second)
+                        val fragment = R2FXLPageFragment.newInstance(title, single.second)
+                        fragment.listener = listener
+                        fragment
                     }
                 }
-                Publication.TYPE.CBZ -> R2CbzPageFragment.newInstance(publicationPath, resources[position] as String)
+
+                Publication.TYPE.CBZ -> {
+                    R2CbzPageFragment.newInstance(publicationPath, resources[position] as String)
+                }
             }
 
     override fun getCount(): Int {

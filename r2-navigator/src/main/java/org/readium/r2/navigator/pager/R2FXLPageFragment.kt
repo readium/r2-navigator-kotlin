@@ -17,12 +17,13 @@ import android.view.ViewGroup
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.webkit.WebViewClientCompat
 import org.readium.r2.navigator.R
-import org.readium.r2.navigator.R2EpubActivity
 import org.readium.r2.navigator.fxl.R2FXLLayout
 import org.readium.r2.navigator.fxl.R2FXLOnDoubleTapListener
+import org.readium.r2.navigator.interfaces.R2EpubPageFragmentListener
 
 
 class R2FXLPageFragment : Fragment() {
@@ -36,6 +37,7 @@ class R2FXLPageFragment : Fragment() {
     private val bookTitle: String?
         get() = arguments!!.getString("title")
 
+    lateinit var listener: R2EpubPageFragmentListener
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -50,7 +52,7 @@ class R2FXLPageFragment : Fragment() {
 
             r2FXLLayout.addOnTapListener(object : R2FXLLayout.OnTapListener {
                 override fun onTap(view: R2FXLLayout, info: R2FXLLayout.TapInfo): Boolean {
-                    (activity as R2EpubActivity).toggleActionBar()
+                    listener.toggleActionBar()
                     return true
                 }
             })
@@ -62,7 +64,7 @@ class R2FXLPageFragment : Fragment() {
             setupWebView(right, secondResourceUrl)
 
             return view
-        }?:run {
+        } ?: run {
             val view: View = inflater.inflate(R.layout.fxlview_single, container, false)
             view.setPadding(0, 0, 0, 0)
 
@@ -72,7 +74,7 @@ class R2FXLPageFragment : Fragment() {
 
             r2FXLLayout.addOnTapListener(object : R2FXLLayout.OnTapListener {
                 override fun onTap(view: R2FXLLayout, info: R2FXLLayout.TapInfo): Boolean {
-                    (activity as R2EpubActivity).toggleActionBar()
+                    listener.toggleActionBar()
                     return true
                 }
             })
@@ -87,7 +89,8 @@ class R2FXLPageFragment : Fragment() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView(webView: R2BasicWebView, resourceUrl: String?) {
-        webView.activity = activity as R2EpubActivity
+        webView.activity = activity as AppCompatActivity
+        webView.listener = listener
 
         webView.settings.javaScriptEnabled = true
         webView.isVerticalScrollBarEnabled = false

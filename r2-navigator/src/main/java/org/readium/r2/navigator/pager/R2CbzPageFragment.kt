@@ -29,11 +29,10 @@ class R2CbzPageFragment : androidx.fragment.app.Fragment() {
         get() = arguments!!.getString("zipEntry")
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-
         val v = inflater.inflate(R.layout.fragment_page_cbz, container, false)
         val imageView = v.findViewById<ImageView>(R.id.imageView)
-
         val blob = ZipUtil.unpackEntry(File(zipFile), zipEntry)
+        
         blob?.let {
             val arrayInputStream = ByteArrayInputStream(it)
             val bitmap = BitmapFactory.decodeStream(arrayInputStream)
@@ -44,7 +43,6 @@ class R2CbzPageFragment : androidx.fragment.app.Fragment() {
     }
 
     companion object {
-
         fun newInstance(zipFile: String, zipEntry: String): R2CbzPageFragment {
             val args = Bundle()
             args.putString("zipFile", zipFile)
