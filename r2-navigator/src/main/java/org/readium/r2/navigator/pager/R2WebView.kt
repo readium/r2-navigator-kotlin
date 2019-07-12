@@ -947,7 +947,7 @@ class R2WebView(context: Context, attrs: AttributeSet) : R2BasicWebView(context,
         return outRect
     }
 
-    internal fun pageLeft(): Boolean {
+    fun pageLeft(): Boolean {
         if (mCurItem > 0) {
             setCurrentItem(mCurItem - 1, true)
             return true
@@ -955,7 +955,7 @@ class R2WebView(context: Context, attrs: AttributeSet) : R2BasicWebView(context,
         return false
     }
 
-    internal fun pageRight(): Boolean {
+    fun pageRight(): Boolean {
         if (mCurItem < numPages) {
             setCurrentItem(mCurItem + 1, true)
             return true
@@ -963,7 +963,7 @@ class R2WebView(context: Context, attrs: AttributeSet) : R2BasicWebView(context,
         return false
     }
 
-    internal val numPages: Int
+    val numPages: Int
         get() {
             var numPages = 0
             try {

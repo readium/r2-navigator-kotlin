@@ -14,7 +14,7 @@ apply plugin: 'com.github.dcendents.android-maven'
 group='com.github.readium'
 
 android {
-    flavorDimensions "testapp"
+    flavorDimensions "default"
 
     compileSdkVersion 28
     defaultConfig {
@@ -28,20 +28,6 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
-    productFlavors {
-        intTestapp {
-            dimension "testapp"
-        }
-        intTestappWithLcp {
-            dimension "testapp"
-        }
-        devTestapp {
-            dimension "testapp"
-        }
-        devTestappWithLcp {
-            dimension "testapp"
         }
     }
 
