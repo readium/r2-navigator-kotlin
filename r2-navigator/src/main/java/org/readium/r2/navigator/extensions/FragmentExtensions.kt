@@ -1,5 +1,6 @@
 package org.readium.r2.navigator.extensions
 
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.Fragment
 
@@ -7,7 +8,9 @@ import androidx.fragment.app.Fragment
  * activity is ViewCompat.LAYOUT_DIRECTION_RTL. Otherwise false. */
 fun Fragment.layoutDirectionIsRTL(): Boolean {
     view?.let {
-        return ViewCompat.getLayoutDirection(it.findViewById(android.R.id.content)) == ViewCompat.LAYOUT_DIRECTION_RTL
+        (it.context as? AppCompatActivity)?.let { activity ->
+            return ViewCompat.getLayoutDirection(activity.findViewById(android.R.id.content)) == ViewCompat.LAYOUT_DIRECTION_RTL
+        }
     }
 
     return false
