@@ -9,11 +9,6 @@
 
 package org.readium.r2.navigator
 
-import android.content.Context
-import androidx.annotation.ColorInt
-import androidx.annotation.ColorRes
-import androidx.core.content.ContextCompat
-
 /**
  * Created by aferditamuriqi on 10/3/17.
  */
@@ -26,13 +21,3 @@ import androidx.core.content.ContextCompat
 const val BASE_URL = "http://127.0.0.1"
 //val SERVER_URL = "$BASE_URL:$PORT_NUMBER"
 //val MANIFEST = "/manifest"
-
-
-/**
- * Extensions
- */
-
-@ColorInt
-fun Context.color(@ColorRes id: Int): Int {
-    return ContextCompat.getColor(this, id)
-}
