@@ -166,7 +166,6 @@ abstract class R2FragmentPagerAdapter(private val mFragmentManager: FragmentMana
         }
     }
 
-
     fun getItemId(position: Int): Long {
         return position.toLong()
     }
