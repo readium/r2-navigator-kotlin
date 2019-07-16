@@ -53,9 +53,11 @@ class R2EpubPageFragment : Fragment() {
         val preferences = activity?.getSharedPreferences("org.readium.r2.settings", Context.MODE_PRIVATE)!!
 
         // Set text color depending of appearance preference
-        (v.findViewById(R.id.book_title) as TextView).setTextColor(Color.parseColor(
+        (v.findViewById(R.id.book_title) as TextView).setTextColor(
+            Color.parseColor(
                 if (preferences.getInt(APPEARANCE_REF, 0) > 1) "#ffffff" else "#000000"
-        ))
+            )
+        )
 
         val scrollMode = preferences.getBoolean(SCROLL_REF, false)
         when (scrollMode) {
@@ -145,12 +147,24 @@ class R2EpubPageFragment : Fragment() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
 
-                val currentFragment: R2EpubPageFragment = (webView.listener.resourcePager.adapter as R2PagerAdapter).getCurrentFragment() as R2EpubPageFragment
-                val previousFragment: R2EpubPageFragment? = (webView.listener.resourcePager.adapter as R2PagerAdapter).getPreviousFragment() as? R2EpubPageFragment
-                val nextFragment: R2EpubPageFragment? = (webView.listener.resourcePager.adapter as R2PagerAdapter).getNextFragment() as? R2EpubPageFragment
+                val currentFragment: R2EpubPageFragment =
+                    (webView.listener.resourcePager.adapter as R2PagerAdapter).getCurrentFragment() as R2EpubPageFragment
+
+                val previousFragment: R2EpubPageFragment? =
+                    (webView.listener.resourcePager.adapter as R2PagerAdapter).getPreviousFragment() as? R2EpubPageFragment
+
+                val nextFragment: R2EpubPageFragment? =
+                    (webView.listener.resourcePager.adapter as R2PagerAdapter).getNextFragment() as? R2EpubPageFragment
 
                 if (this@R2EpubPageFragment.tag == currentFragment.tag) {
-                    var locations = Locations.fromJSON(JSONObject(preferences.getString("${webView.listener.publicationIdentifier}-documentLocations", "{}")))
+                    var locations = Locations.fromJSON(
+                        JSONObject(
+                            preferences.getString(
+                                "${webView.listener.publicationIdentifier}-documentLocations",
+                                "{}"
+                            )
+                        )
+                    )
 
                     // TODO this seems to be needed, will need to test more
                     if (url!!.indexOf("#") > 0) {
@@ -172,7 +186,29 @@ class R2EpubPageFragment : Fragment() {
                                     override fun onTick(millisUntilFinished: Long) {}
                                     override fun onFinish() {
                                         currentFragment.webView.calculateCurrentItem()
-                                        currentFragment.webView.setCurrentItem(currentFragment.webView.mCurItem, false)
+                                        currentFragment.webView.setCurrentItem(
+                                            currentFragment.webView.mCurItem,
+                                            false
+                                        )
+                                    }
+                                }).start()
+                            }
+                        } ?: run {
+                            currentFragment.webView.progression = 0.0
+
+                            if (webView.listener.preferences.getBoolean(SCROLL_REF, false)) {
+
+                                currentFragment.webView.scrollToPosition(0.0)
+
+                            } else {
+                                (object : CountDownTimer(100, 1) {
+                                    override fun onTick(millisUntilFinished: Long) {}
+                                    override fun onFinish() {
+                                        currentFragment.webView.calculateCurrentItem()
+                                        currentFragment.webView.setCurrentItem(
+                                            currentFragment.webView.mCurItem,
+                                            false
+                                        )
                                     }
                                 }).start()
                             }
@@ -224,7 +260,14 @@ class R2EpubPageFragment : Fragment() {
             true
         }
 
-        val locations = Locations.fromJSON(JSONObject(preferences.getString("${webView.listener.publicationIdentifier}-documentLocations", "{}")))
+        val locations = Locations.fromJSON(
+            JSONObject(
+                preferences.getString(
+                    "${webView.listener.publicationIdentifier}-documentLocations",
+                    "{}"
+                )
+            )
+        )
 
         locations.fragment?.let {
             var anchor = it
