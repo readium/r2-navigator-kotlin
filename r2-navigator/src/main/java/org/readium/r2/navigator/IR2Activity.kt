@@ -40,6 +40,7 @@ interface IR2Activity {
     fun highlightActivated(id: String) {}
     fun highlightAnnotationMarkActivated(id: String) {}
     fun progressionDidChange(progression: Double) {}
+    fun onPagePropertyChanged(key: String, value: String) {}
 }
 
 interface IR2TTS {
@@ -60,17 +61,21 @@ interface Navigator {
 
 }
 
-fun Navigator.go(locator: Locator, animated: Boolean = false, completion: () -> Unit = {}): Boolean =
-        go(locator = locator, animated = animated, completion = completion)
+fun Navigator.go(
+    locator: Locator,
+    animated: Boolean = false,
+    completion: () -> Unit = {}
+): Boolean =
+    go(locator = locator, animated = animated, completion = completion)
 
 fun Navigator.go(link: Link, animated: Boolean = false, completion: () -> Unit = {}): Boolean =
-        go(link = link, animated = animated, completion = completion)
+    go(link = link, animated = animated, completion = completion)
 
 fun Navigator.goForward(animated: Boolean = false, completion: () -> Unit = {}): Boolean =
-        goForward(animated = animated, completion = completion)
+    goForward(animated = animated, completion = completion)
 
 fun Navigator.goBackward(animated: Boolean = false, completion: () -> Unit = {}): Boolean =
-        goBackward(animated = animated, completion = completion)
+    goBackward(animated = animated, completion = completion)
 
 
 interface NavigatorDelegate {
@@ -107,7 +112,8 @@ enum class ReadingProgression(val rawValue: String) {
     rtl("rtl"), ltr("ltr"), auto("auto");
 
     companion object {
-        operator fun invoke(rawValue: String) = ReadingProgression.values().firstOrNull { it.rawValue == rawValue }
+        operator fun invoke(rawValue: String) =
+            ReadingProgression.values().firstOrNull { it.rawValue == rawValue }
     }
 }
 
