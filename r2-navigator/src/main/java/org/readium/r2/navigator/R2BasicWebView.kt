@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jsoup.Jsoup
 import org.jsoup.safety.Whitelist
+import org.readium.r2.shared.PageProgressionDirection
 import org.readium.r2.shared.SCROLL_REF
 import org.readium.r2.shared.getAbsolute
 
@@ -82,7 +83,7 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
             }
             val scrollMode = listener.preferences.getBoolean(SCROLL_REF, false)
             if (scrollMode) {
-                if (listener.publication.metadata.direction == "rtl") {
+                if (listener.publication.metadata.direction == PageProgressionDirection.rtl) {
                     this@R2BasicWebView.evaluateJavascript("scrollRightRTL();") { result ->
                         if (result.contains("edge")) {
                             navigator.goBackward(animated = animated)
@@ -113,7 +114,7 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
             }
             val scrollMode = listener.preferences.getBoolean(SCROLL_REF, false)
             if (scrollMode) {
-                if (listener.publication.metadata.direction == "rtl") {
+                if (listener.publication.metadata.direction == PageProgressionDirection.rtl) {
                     this@R2BasicWebView.evaluateJavascript("scrollLeftRTL();") { result ->
                         if (result.contains("edge")) {
                             navigator.goForward(animated = animated)

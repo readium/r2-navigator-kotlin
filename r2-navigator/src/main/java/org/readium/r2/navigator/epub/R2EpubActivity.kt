@@ -150,7 +150,7 @@ open class R2EpubActivity : AppCompatActivity(), IR2Activity, IR2Selectable, IR2
 
                 val currentFragment = ((resourcePager.adapter as R2PagerAdapter).mFragments.get((resourcePager.adapter as R2PagerAdapter).getItemId(resourcePager.currentItem))) as? R2EpubPageFragment
 
-                if (layoutDirectionIsRTL() || publication.metadata.direction == PageProgressionDirection.rtl.name) {
+                if (layoutDirectionIsRTL() || publication.metadata.direction == PageProgressionDirection.rtl) {
                     // The view has RTL layout
                     currentFragment?.webView?.let {
                         currentFragment.webView.progression = 1.0
@@ -183,7 +183,7 @@ open class R2EpubActivity : AppCompatActivity(), IR2Activity, IR2Selectable, IR2
 
                 val currentFragment = ((resourcePager.adapter as R2PagerAdapter).mFragments.get((resourcePager.adapter as R2PagerAdapter).getItemId(resourcePager.currentItem))) as? R2EpubPageFragment
 
-                if (layoutDirectionIsRTL() || publication.metadata.direction == PageProgressionDirection.rtl.name) {
+                if (layoutDirectionIsRTL() || publication.metadata.direction == PageProgressionDirection.rtl) {
                     // The view has RTL layout
                     currentFragment?.webView?.let {
                         currentFragment.webView.progression = 0.0
@@ -333,7 +333,7 @@ open class R2EpubActivity : AppCompatActivity(), IR2Activity, IR2Selectable, IR2
         resourcePager.direction = publication.metadata.direction
 
         if (publication.cssStyle == PageProgressionDirection.rtl.name) {
-            resourcePager.direction = PageProgressionDirection.rtl.name
+            resourcePager.direction = PageProgressionDirection.rtl
         }
 
 

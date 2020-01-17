@@ -47,7 +47,7 @@ import java.util.HashMap;
  * modifications are kept internal to <code>RtlViewPager</code>.
  */
 public class R2RTLViewPager extends ViewPager {
-    public String direction = PageProgressionDirection.ltr.name();
+    public PageProgressionDirection direction = PageProgressionDirection.ltr;
     private int mLayoutDirection = ViewCompat.LAYOUT_DIRECTION_LTR;
     private HashMap<OnPageChangeListener, ReversingOnPageChangeListener> mPageChangeListeners = new HashMap<>();
 
@@ -62,7 +62,7 @@ public class R2RTLViewPager extends ViewPager {
     public void onRtlPropertiesChanged(int layoutDirection) {
         super.onRtlPropertiesChanged(layoutDirection);
         int viewCompatLayoutDirection = layoutDirection == View.LAYOUT_DIRECTION_RTL  ? ViewCompat.LAYOUT_DIRECTION_RTL : ViewCompat.LAYOUT_DIRECTION_LTR;
-        if (direction.equals(PageProgressionDirection.rtl.name())) {
+        if (direction.equals(PageProgressionDirection.rtl)) {
             viewCompatLayoutDirection = ViewCompat.LAYOUT_DIRECTION_RTL;
         }
         if (viewCompatLayoutDirection != mLayoutDirection) {
