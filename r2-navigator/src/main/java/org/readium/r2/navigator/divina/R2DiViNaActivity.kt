@@ -20,6 +20,7 @@ import androidx.webkit.WebViewClientCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.readium.r2.navigator.CURRENT_PUB
 import org.readium.r2.navigator.IR2Activity
 import org.readium.r2.navigator.R
 import org.readium.r2.navigator.R2BasicWebView
@@ -47,6 +48,8 @@ open class R2DiViNaActivity : AppCompatActivity(), CoroutineScope, IR2Activity {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val pub = CURRENT_PUB
+        check(pub != null)
         setContentView(R.layout.activity_r2_divina)
 
         preferences = getSharedPreferences("org.readium.r2.settings", Context.MODE_PRIVATE)
@@ -54,10 +57,9 @@ open class R2DiViNaActivity : AppCompatActivity(), CoroutineScope, IR2Activity {
         divinaWebView.activity = this
         divinaWebView.listener = this
 
-        publicationPath = intent.getStringExtra("publicationPath") ?: throw Exception("publicationPath required")
-        publicationFileName = intent.getStringExtra("publicationFileName") ?: throw Exception("publicationFileName required")
-        publication = intent.getSerializableExtra("publication") as Publication
-
+        publicationPath = pub.path
+        publicationFileName = pub.fileName  ?: throw Exception("publicationFileName required")
+        publication = pub.publication
         publicationIdentifier = publication.metadata.identifier!!
         title = publication.metadata.title
 

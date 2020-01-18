@@ -247,6 +247,8 @@ open class R2EpubActivity : AppCompatActivity(), IR2Activity, IR2Selectable, IR2
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val pub = CURRENT_PUB
+        check(pub != null)
         setContentView(R.layout.activity_r2_viewpager)
 
         preferences = getSharedPreferences("org.readium.r2.settings", Context.MODE_PRIVATE)
@@ -256,11 +258,10 @@ open class R2EpubActivity : AppCompatActivity(), IR2Activity, IR2Selectable, IR2
         resourcesSingle = ArrayList()
         resourcesDouble = ArrayList()
 
-        publicationPath = intent.getStringExtra("publicationPath") ?: throw Exception("publicationPath required")
-        publication = intent.getSerializableExtra("publication") as Publication
-        publicationFileName = intent.getStringExtra("publicationFileName") ?: throw Exception("publicationFileName required")
+        publicationPath = pub.path
+        publication = pub.publication
+        publicationFileName = pub.fileName  ?: throw Exception("publicationFileName required")
         publicationIdentifier = publication.metadata.identifier!!
-
         title = null
 
         val port = preferences.getString("$publicationIdentifier-publicationPort", 0.toString())?.toInt()

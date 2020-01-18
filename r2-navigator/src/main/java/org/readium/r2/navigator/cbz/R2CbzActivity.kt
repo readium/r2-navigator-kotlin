@@ -81,15 +81,17 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val pub = CURRENT_PUB
+        check(pub != null)
         setContentView(R.layout.activity_r2_viewpager)
 
         preferences = getSharedPreferences("org.readium.r2.settings", Context.MODE_PRIVATE)
         resourcePager = findViewById(R.id.resourcePager)
         resourcePager.type = Publication.TYPE.CBZ
 
-        publicationPath = intent.getStringExtra("publicationPath") ?: throw Exception("publicationPath required")
-        publicationFileName = intent.getStringExtra("publicationFileName") ?: throw Exception("publicationFileName required")
-        publication = intent.getSerializableExtra("publication") as Publication
+        publicationPath = pub.path
+        publicationFileName = pub.fileName  ?: throw Exception("publicationFileName required")
+        publication = pub.publication
         publicationIdentifier = publication.metadata.identifier!!
         title = publication.metadata.title
 
