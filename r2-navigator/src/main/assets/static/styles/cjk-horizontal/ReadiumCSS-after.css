@@ -283,8 +283,8 @@ body {
 /* we don’t need to redeclare bg-color and color for :root since we will inherit and update from day/default mode */
 
 :root[style*="readium-night-on"] *:not(a) {
-  color: inherit !important;
-  background-color: transparent !important;
+  color: var(--ED-color,inherit) !important;
+  /*background-color: var(--ED-bgcolor,transparent) !important;*/
   border-color: currentColor !important;
 }
 
@@ -303,10 +303,15 @@ body {
   color: var(--RS__visitedColor) !important;
 }
 
-:root[style*="readium-night-on"] img[class*="gaiji"],
+:root[style*="readium-night-on"] img:not(.colorful)/*[class*="gaiji"]*/,
 :root[style*="readium-night-on"] *[epub\:type~="titlepage"] img:only-child {
   -webkit-filter: invert(100%);
   filter: invert(100%);
+}
+
+:root[style*="readium-night-on"] img.colorful {
+  -webkit-filter: brightness(70%);
+  filter: brightness(70%);
 }
 
 /* Darken all images on user’s demand */
@@ -358,7 +363,7 @@ body {
 :root[style*="readium-sepia-on"] body {
   /* Should be transparent but Chrome bug https://bugs.chromium.org/p/chromium/issues/detail?id=711955&q=mix-blend-mode&colspec=ID%20Pri%20M%20Stars%20ReleaseBlock%20Component%20Status%20Owner%20Summary%20OS%20Modified */
 
-  color: inherit;
+  color: var(--ED-color,inherit)  !important;
   background-color: var(--RS__backgroundColor);
 }
 

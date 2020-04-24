@@ -41,7 +41,7 @@ import org.readium.r2.shared.publication.presentation.presentation
 import java.net.URI
 import kotlin.coroutines.CoroutineContext
 import kotlin.math.ceil
-
+import tti.NavigatorExtension
 
 open class R2EpubActivity : AppCompatActivity(), IR2Activity, IR2Selectable, IR2Highlightable, IR2TTS, CoroutineScope, VisualNavigator {
 
@@ -262,7 +262,15 @@ open class R2EpubActivity : AppCompatActivity(), IR2Activity, IR2Selectable, IR2
                     getAbsolute(spineItem.href, publicationPath)
                 }
             } else {
-                "$BASE_URL:$port" + "/" + publicationFileName + spineItem.href
+                var url:String? = null
+                for(e in NavigatorExtension.allExtension){
+                    val u = e.urlForEpub(publicationFileName , spineItem.href)
+                    if(u!=null){
+                        url = u
+                        break
+                    }
+                }
+                url ?: "$BASE_URL:$port" + "/" + publicationFileName + spineItem.href
             }
             resourcesSingle.add(Pair(resourceIndexSingle, uri))
 
@@ -541,12 +549,15 @@ open class R2EpubActivity : AppCompatActivity(), IR2Activity, IR2Selectable, IR2
         }
     }
 
+    open var noteColor:Int? = null
+    open fun highlightColors(res:MutableMap<Int,Int>){
+    }
     fun createAnnotation(highlight: Highlight?, callback: (Highlight) -> Unit) {
         if (highlight != null) {
             currentFragment?.webView?.createAnnotation(highlight.id)
             callback(highlight)
         } else {
-            createHighlight(Color.rgb(150, 150, 150)) {
+            createHighlight(noteColor?:Color.rgb(150, 150, 150)) {
                 createAnnotation(it) { highlight ->
                     callback(highlight)
                 }
@@ -555,8 +566,8 @@ open class R2EpubActivity : AppCompatActivity(), IR2Activity, IR2Selectable, IR2
 
     }
 
-    override fun onPageLoaded() {
-        super.onPageLoaded()
+    override fun onPageLoaded(webView: R2BasicWebView) {
+        super.onPageLoaded(webView)
     }
 
 }

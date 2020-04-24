@@ -249,7 +249,7 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
     fun setProperty(key: String, value: String) {
         this.evaluateJavascript("setProperty(\"$key\", \"$value\");") {
             // Used to redraw highlights when user settings changed.
-            listener.onPageLoaded()
+            listener.onPageLoaded(this)
         }
     }
 

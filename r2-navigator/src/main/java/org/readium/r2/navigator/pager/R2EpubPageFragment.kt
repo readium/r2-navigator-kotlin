@@ -34,7 +34,7 @@ import org.readium.r2.shared.SCROLL_REF
 import org.readium.r2.shared.publication.Locator
 import java.io.IOException
 import java.io.InputStream
-
+import tti.NavigatorExtension
 
 class R2EpubPageFragment : Fragment() {
 
@@ -88,6 +88,9 @@ class R2EpubPageFragment : Fragment() {
         webView.resourceUrl = resourceUrl
         webView.setPadding(0, 0, 0, 0)
         webView.addJavascriptInterface(webView, "Android")
+        for(e in NavigatorExtension.allExtension){
+            e.addJavascriptInterface(webView)
+        }
 
         var endReached = false
         webView.setOnOverScrolledCallback(object : R2BasicWebView.OnOverScrolledCallback {
@@ -154,7 +157,7 @@ class R2EpubPageFragment : Fragment() {
                     // TODO this seems to be needed, will need to test more
                     if (url!!.indexOf("#") > 0) {
                         val id = url.substring(url.indexOf('#'))
-                        webView.loadUrl("javascript:scrollAnchor($id);")
+                        webView.loadUrl("javascript:scrollAnchor('$id');")
                         locations = Locator.Locations(fragments = listOf(id))
                     }
 
@@ -180,7 +183,7 @@ class R2EpubPageFragment : Fragment() {
                     }
 
                 }
-                webView.listener.onPageLoaded()
+                webView.listener.onPageLoaded(webView)
 
             }
 
@@ -190,6 +193,12 @@ class R2EpubPageFragment : Fragment() {
                     try {
                         return WebResourceResponse("image/png", null, null)
                     } catch (e: Exception) {
+                    }
+                }
+                for(e in NavigatorExtension.allExtension){
+                    val ret = e.shouldInterceptRequest(view,request)
+                    if(ret!=null){
+                        return ret
                     }
                 }
                 return null

@@ -89,6 +89,16 @@ function setHighlightAreaStyle(win, highlightAreas, highlight) {
     }
 }
 
+function styleHighlightAreaExt(highlightArea,highlight){
+    for(var i=0;i<extensions.length;i++){
+        var clr = `rgb(${highlight.color.red}, ${highlight.color.green}, ${highlight.color.blue})`;
+        var f = extensions[i].styleHighlightArea;
+        if(f){
+            f(highlightArea,clr);
+        }
+    }
+}
+
 function resetHighlightAreaStyle(win, highlightArea) {
     const useSVG = !DEBUG_VISUALS && USE_SVG;
     //const useSVG = USE_SVG;
@@ -111,6 +121,7 @@ function resetHighlightAreaStyle(win, highlightArea) {
             else {
                 highlightArea.style.setProperty("background-color", `rgba(${highlight.color.red}, ${highlight.color.green}, ${highlight.color.blue}, ${opacity})`, "important");
             }
+            styleHighlightAreaExt(highlightArea,highlight);
         }
     }
 }
@@ -756,7 +767,7 @@ function ensureContainer(win, annotationFlag) {
 		_highlightsContainer.setAttribute("id", ID_HIGHLIGHTS_CONTAINER);
 
         _highlightsContainer.style.setProperty("pointer-events", "none");
-        document.body.append(_highlightsContainer);
+        document.body.appendChild(_highlightsContainer);
     }
 
     return _highlightsContainer;
@@ -1273,6 +1284,8 @@ function createHighlightDom(win, highlight, annotationFlag) {
     const doNotMergeHorizontallyAlignedRects = drawUnderline || drawStrikeThrough;
     //const clientRects = DEBUG_VISUALS ? range.getClientRects() :
     const clientRects = getClientRectsNoOverlap(range, doNotMergeHorizontallyAlignedRects);
+    var rectList = range.getClientRects();
+
     let highlightAreaSVGDocFrag;
     const roundedCorner = 3;
     const underlineThickness = 2;
@@ -1471,7 +1484,8 @@ function createHighlightDom(win, highlight, annotationFlag) {
             highlightArea.style.height = `${highlightArea.rect.height * scale}px`;
             highlightArea.style.left = `${highlightArea.rect.left * scale}px`;
             highlightArea.style.top = `${highlightArea.rect.top * scale}px`;
-            highlightParent.append(highlightArea);
+            highlightParent.appendChild(highlightArea);
+            styleHighlightAreaExt(highlightArea,highlight);
             if (!DEBUG_VISUALS && drawStrikeThrough) {
                 //if (drawStrikeThrough) {
                 const highlightAreaLine = document.createElement("div");
@@ -1569,8 +1583,8 @@ function createHighlightDom(win, highlight, annotationFlag) {
     highlightBounding.style.left = `${highlightBounding.rect.left * scale}px`;
     highlightBounding.style.top = `${highlightBounding.rect.top * scale}px`;
 
-    highlightParent.append(highlightBounding);
-    highlightsContainer.append(highlightParent);
+    highlightParent.appendChild(highlightBounding);
+    highlightsContainer.appendChild(highlightParent);
 
     return highlightParent;
 }

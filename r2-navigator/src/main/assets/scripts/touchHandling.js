@@ -4,7 +4,7 @@ var startY = 0;
 var availWidth = window.screen.availWidth;
 var availHeight = window.screen.availHeight;
 
-
+var extensions = [];
 
 window.addEventListener("load", function() { // on page load
     // Get screen X and Y sizes.
@@ -17,12 +17,25 @@ window.addEventListener("load", function() { // on page load
 
 
 var handleClick = function(event) {
+    for(var i=0;i<extensions.length;i++){
+        var f = extensions[i].handleClick;
+        if(f){
+            if(f(event)) return
+        }
+    }
     Android.handleClick(event.target.outerHTML)
 };
 
 
 // When a touch is detected records its starting coordinates and if it's a singleTouchGesture.
 var handleTouchStart = function(event) {
+    for(var i=0;i<extensions.length;i++){
+        var f = extensions[i].handleTouchStart;
+        if(f){
+            if(f(event)) return
+        }
+    }
+
     if (event.target.nodeName.toUpperCase() === 'A') {
         console.log("Touched a link.");
         // singleTouchGesture = false;
@@ -43,7 +56,12 @@ var handleTouchEnd = function(event) {
     if (!singleTouchGesture) {
         return;
     }
-
+    for(var i=0;i<extensions.length;i++){
+        var f = extensions[i].handleTouchEnd;
+        if(f){
+            if(f(event)) return
+        }
+    }
     var touch = event.changedTouches[0];
 
     var relativeDistanceX = Math.abs(((touch.screenX % availWidth) - startX) / availWidth);
