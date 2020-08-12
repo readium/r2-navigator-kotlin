@@ -22,6 +22,7 @@ import android.view.ActionMode
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.LiveData
+import androidx.viewpager2.widget.ViewPager2
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -49,7 +50,7 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
         get() = Dispatchers.Main
 
     override lateinit var preferences: SharedPreferences
-    override lateinit var resourcePager: R2ViewPager
+    override lateinit var resourcePager: ViewPager2
     override lateinit var publicationPath: String
     override lateinit var publicationFileName: String
     override lateinit var publication: Publication
@@ -63,11 +64,14 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
     val adapter: R2PagerAdapter get() =
         resourcePager.adapter as R2PagerAdapter
 
-    private val currentFragment: R2EpubPageFragment? get() =
-        adapter.mFragments.get(adapter.getItemId(resourcePager.currentItem)) as? R2EpubPageFragment
+//    private val currentFragment: R2EpubPageFragment? get() =
+//        adapter.mFragments.get(adapter.getItemId(resourcePager.currentItem)) as? R2EpubPageFragment
 
     private val navigatorFragment: EpubNavigatorFragment get() =
         supportFragmentManager.findFragmentById(R.id.epub_navigator) as EpubNavigatorFragment
+
+    private val currentFragment: R2EpubPageFragment? get() =
+        supportFragmentManager.findFragmentByTag("f${navigatorFragment.resourcePager.currentItem}") as? R2EpubPageFragment
 
     // For backward compatibility, we expose these properties only through the `R2EpubActivity`.
     val positions: List<Locator> get() = navigatorFragment.positions
@@ -96,6 +100,8 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
         setContentView(R.layout.activity_r2_epub)
 
         resourcePager = navigatorFragment.resourcePager
+
+        resourcePager.isUserInputEnabled = false
 
         title = null
     }

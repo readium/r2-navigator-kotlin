@@ -13,11 +13,13 @@ import android.os.Bundle
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.Lifecycle
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
 
 
-class R2PagerAdapter(val fm: FragmentManager, private val resources: List<Any>, private val title: String, private val type: Publication.TYPE, private val publicationPath: String = "") : R2FragmentPagerAdapter(fm) {
+class R2PagerAdapter(val fm: FragmentManager, val l: Lifecycle, private val resources: List<Any>, private val title: String, private val type: Publication.TYPE, private val publicationPath: String = "") : FragmentStateAdapter(fm, l) {
 
     private var currentFragment: Fragment? = null
     private var previousFragment: Fragment? = null
@@ -35,16 +37,16 @@ class R2PagerAdapter(val fm: FragmentManager, private val resources: List<Any>, 
         return nextFragment
     }
 
-    override fun setPrimaryItem(container: ViewGroup, position: Int, `object`: Any) {
-        if (getCurrentFragment() !== `object`) {
-            currentFragment = `object` as Fragment
-            nextFragment = mFragments.get(getItemId(position + 1))
-            previousFragment = mFragments.get(getItemId(position - 1))
-        }
-        super.setPrimaryItem(container, position, `object`)
-    }
+//    override fun setPrimaryItem(container: ViewGroup, position: Int, `object`: Any) {
+//        if (getCurrentFragment() !== `object`) {
+//            currentFragment = `object` as Fragment
+//            nextFragment = mFragments.get(getItemId(position + 1))
+//            previousFragment = mFragments.get(getItemId(position - 1))
+//        }
+//        super.setPrimaryItem(container, position, `object`)
+//    }
 
-    override fun getItem(position: Int): Fragment =
+    override fun createFragment(position: Int): Fragment =
             when (type) {
                 Publication.TYPE.EPUB, Publication.TYPE.WEBPUB, Publication.TYPE.AUDIO -> {
                     val single = resources[position] as Pair<Int, String>
@@ -70,7 +72,7 @@ class R2PagerAdapter(val fm: FragmentManager, private val resources: List<Any>, 
                 Publication.TYPE.DiViNa -> TODO()
             }
 
-    override fun getCount(): Int {
+    override fun getItemCount(): Int {
         return resources.size
     }
 

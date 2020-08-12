@@ -147,11 +147,11 @@ class R2EpubPageFragment : Fragment() {
                 super.onPageFinished(view, url)
 
                 val epubNavigator = (webView.navigator as? EpubNavigatorFragment)
-                val currentFragment: R2EpubPageFragment = (epubNavigator?.resourcePager?.adapter as R2PagerAdapter).getCurrentFragment() as R2EpubPageFragment
+//                val currentFragment: R2EpubPageFragment = (epubNavigator?.resourcePager?.adapter as R2PagerAdapter).getCurrentFragment() as R2EpubPageFragment
 
-                if (this@R2EpubPageFragment.tag == currentFragment.tag) {
-                    var locations = epubNavigator.pendingLocator?.locations
-                    epubNavigator.pendingLocator = null
+//                if (this@R2EpubPageFragment.tag == currentFragment.tag) {
+                    var locations = epubNavigator?.pendingLocator?.locations
+                    epubNavigator?.pendingLocator = null
 
                     // TODO this seems to be needed, will need to test more
                     if (url!!.indexOf("#") > 0) {
@@ -162,24 +162,24 @@ class R2EpubPageFragment : Fragment() {
 
                     if (locations != null && locations.fragments.isEmpty()) {
                         locations.progression?.let { progression ->
-                            currentFragment.webView.progression = progression
+                            this@R2EpubPageFragment.webView.progression = progression
 
                             if (webView.scrollMode) {
-                                currentFragment.webView.scrollToPosition(progression)
+                                this@R2EpubPageFragment.webView.scrollToPosition(progression)
                             } else {
                                 // FIXME: We need a better way to wait, because if the value is too low it fails
                                 (object : CountDownTimer(200, 1) {
                                     override fun onTick(millisUntilFinished: Long) {}
                                     override fun onFinish() {
-                                        currentFragment.webView.calculateCurrentItem()
-                                        currentFragment.webView.setCurrentItem(currentFragment.webView.mCurItem, false)
+                                        this@R2EpubPageFragment.webView.calculateCurrentItem()
+                                        this@R2EpubPageFragment.webView.setCurrentItem(this@R2EpubPageFragment.webView.mCurItem, false)
                                     }
                                 }).start()
                             }
                         }
                     }
 
-                }
+//                }
                 webView.listener.onPageLoaded()
             }
 
