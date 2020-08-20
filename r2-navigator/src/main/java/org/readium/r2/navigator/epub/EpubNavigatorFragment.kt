@@ -117,6 +117,7 @@ class EpubNavigatorFragment(
 
 
         if (publication.metadata.presentation.layout == EpubLayout.REFLOWABLE) {
+            resourcePager.isUserInputEnabled = false
             adapter = R2PagerAdapter(supportFragmentManager, lifecycle, resourcesSingle, publication.metadata.title, Publication.TYPE.EPUB)
         } else {
             adapter = when (preferences.getInt(COLUMN_COUNT_REF, 0)) {

@@ -99,8 +99,6 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
 
         resourcePager = navigatorFragment.resourcePager
 
-        resourcePager.isUserInputEnabled = false
-
         title = null
     }
 
