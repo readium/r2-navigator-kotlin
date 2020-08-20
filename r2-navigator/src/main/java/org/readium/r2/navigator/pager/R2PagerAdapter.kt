@@ -19,31 +19,22 @@ import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
 
 
-class R2PagerAdapter(val fm: FragmentManager, val l: Lifecycle, private val resources: List<Any>, private val title: String, private val type: Publication.TYPE, private val publicationPath: String = "") : FragmentStateAdapter(fm, l) {
+class R2PagerAdapter(val fm: FragmentManager, l: Lifecycle, private val resources: List<Any>, private val title: String, private val type: Publication.TYPE, private val publicationPath: String = "") : FragmentStateAdapter(fm, l) {
 
-    private var currentFragment: Fragment? = null
-    private var previousFragment: Fragment? = null
-    private var nextFragment: Fragment? = null
-
-    fun getCurrentFragment(): Fragment? {
-        return currentFragment
-    }
-
-    fun getPreviousFragment(): Fragment? {
-        return previousFragment
-    }
-
-    fun getNextFragment(): Fragment? {
-        return nextFragment
-    }
-
-//    override fun setPrimaryItem(container: ViewGroup, position: Int, `object`: Any) {
-//        if (getCurrentFragment() !== `object`) {
-//            currentFragment = `object` as Fragment
-//            nextFragment = mFragments.get(getItemId(position + 1))
-//            previousFragment = mFragments.get(getItemId(position - 1))
-//        }
-//        super.setPrimaryItem(container, position, `object`)
+//    private var currentFragment: Fragment? = null
+//    private var previousFragment: Fragment? = null
+//    private var nextFragment: Fragment? = null
+//
+//    fun getCurrentFragment(): Fragment? {
+//        return currentFragment
+//    }
+//
+//    fun getPreviousFragment(): Fragment? {
+//        return previousFragment
+//    }
+//
+//    fun getNextFragment(): Fragment? {
+//        return nextFragment
 //    }
 
     override fun createFragment(position: Int): Fragment =

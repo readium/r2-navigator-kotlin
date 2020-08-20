@@ -71,7 +71,6 @@ class EpubNavigatorFragment(
         preferences = requireContext().getSharedPreferences("org.readium.r2.settings", Context.MODE_PRIVATE)
 
         resourcePager = view.findViewById(R.id.resourcePager)
-//        resourcePager.type = Publication.TYPE.EPUB
 
         resourcesSingle = ArrayList()
         resourcesDouble = ArrayList()
@@ -119,9 +118,7 @@ class EpubNavigatorFragment(
 
         if (publication.metadata.presentation.layout == EpubLayout.REFLOWABLE) {
             adapter = R2PagerAdapter(supportFragmentManager, lifecycle, resourcesSingle, publication.metadata.title, Publication.TYPE.EPUB)
-//            resourcePager.type = Publication.TYPE.EPUB
         } else {
-//            resourcePager.type = Publication.TYPE.FXL
             adapter = when (preferences.getInt(COLUMN_COUNT_REF, 0)) {
                 1 -> {
                     R2PagerAdapter(supportFragmentManager, lifecycle, resourcesSingle, publication.metadata.title, Publication.TYPE.FXL)
@@ -142,7 +139,6 @@ class EpubNavigatorFragment(
         resourcePager.layoutDirection = View.LAYOUT_DIRECTION_LTR
 
         if (publication.cssStyle == ReadingProgression.RTL.value) {
-//            resourcePager.direction = ReadingProgression.RTL
             resourcePager.layoutDirection = View.LAYOUT_DIRECTION_RTL
         }
 
@@ -324,7 +320,7 @@ class EpubNavigatorFragment(
 
                 resourcePager.setCurrentItem(resourcePager.currentItem + 1, animated)
 
-                if (currentFragment?.activity?.layoutDirectionIsRTL() ?: publication.contentLayout.readingProgression == ReadingProgression.RTL) {
+                if (publication.contentLayout.readingProgression == ReadingProgression.RTL) {
                     // The view has RTL layout
                     currentFragment?.webView?.apply {
                         progression = 1.0
@@ -348,7 +344,7 @@ class EpubNavigatorFragment(
 
                 resourcePager.setCurrentItem(resourcePager.currentItem - 1, animated)
 
-                if (currentFragment?.activity?.layoutDirectionIsRTL() ?: publication.contentLayout.readingProgression == ReadingProgression.RTL) {
+                if (publication.contentLayout.readingProgression == ReadingProgression.RTL) {
                     // The view has RTL layout
                     currentFragment?.webView?.apply {
                         progression = 0.0
@@ -366,12 +362,12 @@ class EpubNavigatorFragment(
         return true
     }
 
+    // FIXME this isn't used
     private val r2PagerAdapter: R2PagerAdapter
         get() = resourcePager.adapter as R2PagerAdapter
 
-    private val currentFragment: R2EpubPageFragment? get() =
-        r2PagerAdapter.fm.findFragmentByTag("f${resourcePager.currentItem}") as? R2EpubPageFragment
-//        r2PagerAdapter.mFragments.get(r2PagerAdapter.getItemId(resourcePager.currentItem)) as? R2EpubPageFragment
+    val currentFragment: R2EpubPageFragment? get() =
+        adapter.fm.findFragmentByTag("f${resourcePager.currentItem}") as? R2EpubPageFragment
 
     override val readingProgression: ReadingProgression
         get() = publication.contentLayout.readingProgression

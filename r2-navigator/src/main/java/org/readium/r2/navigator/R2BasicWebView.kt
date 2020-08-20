@@ -37,7 +37,7 @@ import org.readium.r2.shared.publication.ReadingProgression
 open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(context, attrs) {
 
     lateinit var listener: Listener
-    lateinit var navigator: Navigator
+    lateinit var navigator: VisualNavigator
 
     var progression: Double = 0.0
     var overrideUrlLoading = true
@@ -86,7 +86,7 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
                 }
             } else {
                 if (!this@R2BasicWebView.canScrollHorizontally(1)) {
-                    listener.goForward(animated = animated)
+                    navigator.goRight(animated = animated)
                 }
                 this@R2BasicWebView.evaluateJavascript("scrollRight();", null)
             }
@@ -110,7 +110,7 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
                 }
             } else {
                 if (!this@R2BasicWebView.canScrollHorizontally(-1)) {
-                    listener.goBackward(animated = animated)
+                    navigator.goLeft(animated = animated)
                 }
                 this@R2BasicWebView.evaluateJavascript("scrollLeft();", null)
             }

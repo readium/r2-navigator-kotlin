@@ -61,17 +61,15 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
 
     protected var navigatorDelegate: NavigatorDelegate? = null
 
+    // FIXME This isn't used
     val adapter: R2PagerAdapter get() =
         resourcePager.adapter as R2PagerAdapter
-
-//    private val currentFragment: R2EpubPageFragment? get() =
-//        adapter.mFragments.get(adapter.getItemId(resourcePager.currentItem)) as? R2EpubPageFragment
 
     private val navigatorFragment: EpubNavigatorFragment get() =
         supportFragmentManager.findFragmentById(R.id.epub_navigator) as EpubNavigatorFragment
 
     private val currentFragment: R2EpubPageFragment? get() =
-        supportFragmentManager.findFragmentByTag("f${navigatorFragment.resourcePager.currentItem}") as? R2EpubPageFragment
+        navigatorFragment.currentFragment
 
     // For backward compatibility, we expose these properties only through the `R2EpubActivity`.
     val positions: List<Locator> get() = navigatorFragment.positions
