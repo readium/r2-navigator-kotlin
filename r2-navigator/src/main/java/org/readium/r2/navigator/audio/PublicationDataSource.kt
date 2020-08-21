@@ -1,0 +1,108 @@
+/*
+ * Copyright 2020 Readium Foundation. All rights reserved.
+ * Use of this source code is governed by the BSD-style license
+ * available in the top-level LICENSE file of the project.
+ */
+
+package org.readium.r2.navigator.audio
+
+import android.net.Uri
+import com.google.android.exoplayer2.C.LENGTH_UNSET
+import com.google.android.exoplayer2.C.RESULT_END_OF_INPUT
+import com.google.android.exoplayer2.upstream.BaseDataSource
+import com.google.android.exoplayer2.upstream.DataSource
+import com.google.android.exoplayer2.upstream.DataSpec
+import com.google.android.exoplayer2.upstream.TransferListener
+import kotlinx.coroutines.runBlocking
+import org.readium.r2.shared.fetcher.ResourceInputStream
+import org.readium.r2.shared.publication.Publication
+import java.io.EOFException
+import java.io.IOException
+
+
+/**
+ * An ExoPlayer's [DataSource] which retrieves resources from a [Publication].
+ */
+internal class PublicationDataSource(private val publication: Publication) : BaseDataSource(/* isNetwork = */ true) {
+
+    class Factory(private val publication: Publication, private val transferListener: TransferListener? = null) : DataSource.Factory {
+
+        override fun createDataSource(): DataSource =
+            PublicationDataSource(publication).apply {
+                if (transferListener != null) {
+                    addTransferListener(transferListener)
+                }
+            }
+
+    }
+
+    sealed class Exception(message: String, cause: Throwable?) : IOException(message, cause) {
+        class NotOpened(message: String) : Exception(message, null)
+        class NotFound(message: String) : Exception(message, null)
+        class ReadFailed(uri: Uri, offset: Int, readLength: Int, cause: Throwable) : Exception("Failed to read $readLength bytes of URI $uri at offset $offset.", cause)
+    }
+
+    private data class OpenedResource(
+        val inputStream: ResourceInputStream,
+        val uri: Uri,
+        var bytesRemaining: Long
+    )
+
+    private var openedResource: OpenedResource? = null
+
+    override fun open(dataSpec: DataSpec?): Long {
+        dataSpec ?: throw IllegalArgumentException("[dataSpec] is required")
+        close()
+
+        val link = publication.linkWithHref(dataSpec.uri.toString())
+            ?: throw Exception.NotFound("Can't find a [Link] for URI: ${dataSpec.uri}. Make sure you only request resources declared in the manifest.")
+
+        val inputStream = ResourceInputStream(publication.get(link))
+        val skipped = inputStream.skip(dataSpec.position)
+        if (skipped < dataSpec.position) {
+            throw EOFException()
+        }
+
+        val bytesRemaining =
+            if (dataSpec.length == LENGTH_UNSET.toLong()) inputStream.available().toLong()
+            else dataSpec.length
+
+        openedResource = OpenedResource(inputStream, dataSpec.uri, bytesRemaining = bytesRemaining)
+        return bytesRemaining
+    }
+
+    override fun read(buffer: ByteArray?, offset: Int, readLength: Int): Int {
+        @Suppress("NAME_SHADOWING")
+        val buffer = buffer ?: throw IllegalArgumentException("[buffer] is required.")
+        val openedResource = openedResource ?: throw Exception.NotOpened("No opened resource to read from. Did you call open()?")
+
+        when {
+            (readLength <= 0) -> return 0
+            (openedResource.bytesRemaining == 0.toLong()) -> return RESULT_END_OF_INPUT
+        }
+
+        val bytesRead = try {
+            val bytesToRead = readLength.coerceAtMost(openedResource.bytesRemaining.toInt())
+            openedResource.inputStream.read(buffer, offset, bytesToRead)
+        } catch (e: Exception) {
+            throw Exception.ReadFailed(uri = openedResource.uri, offset = offset, readLength = readLength, cause = e)
+        }
+
+        if (bytesRead == -1) {
+            return RESULT_END_OF_INPUT
+        }
+
+        openedResource.bytesRemaining -= bytesRead
+        return bytesRead
+    }
+
+    override fun getUri(): Uri? = openedResource?.uri
+
+    override fun close() {
+        openedResource?.run {
+            runBlocking { inputStream.close() }
+        }
+        openedResource = null
+    }
+
+}
