@@ -18,6 +18,7 @@ import org.readium.r2.shared.fetcher.ResourceInputStream
 import org.readium.r2.shared.publication.Publication
 import java.io.EOFException
 import java.io.IOException
+import java.io.InputStream
 
 
 /**
@@ -43,7 +44,7 @@ internal class PublicationDataSource(private val publication: Publication) : Bas
     }
 
     private data class OpenedResource(
-        val inputStream: ResourceInputStream,
+        val inputStream: InputStream,
         val uri: Uri,
         var bytesRemaining: Long
     )
@@ -57,7 +58,10 @@ internal class PublicationDataSource(private val publication: Publication) : Bas
         val link = publication.linkWithHref(dataSpec.uri.toString())
             ?: throw Exception.NotFound("Can't find a [Link] for URI: ${dataSpec.uri}. Make sure you only request resources declared in the manifest.")
 
-        val inputStream = ResourceInputStream(publication.get(link))
+        val inputStream = ResourceInputStream(publication.get(link), autocloseResource = true)
+            // Significantly improves performances, in particular with deflated ZIP entries.
+            .buffered()
+
         val skipped = inputStream.skip(dataSpec.position)
         if (skipped < dataSpec.position) {
             throw EOFException()
