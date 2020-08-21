@@ -5,6 +5,7 @@
  */
 package org.readium.r2.navigator.extensions
 
+import android.os.SystemClock
 import android.support.v4.media.session.PlaybackStateCompat
 
 inline val PlaybackStateCompat.isPrepared get() =
@@ -19,3 +20,15 @@ inline val PlaybackStateCompat.isPlaying get() =
 inline val PlaybackStateCompat.canPlay get() =
     (actions and PlaybackStateCompat.ACTION_PLAY != 0L) ||
     ((actions and PlaybackStateCompat.ACTION_PLAY_PAUSE != 0L) && (state == PlaybackStateCompat.STATE_PAUSED))
+
+/**
+ * Calculates the current playback position based on last update time along with playback
+ * state and speed.
+ */
+inline val PlaybackStateCompat.elapsedPosition: Long get() =
+    if (state == PlaybackStateCompat.STATE_PLAYING) {
+        val timeDelta = SystemClock.elapsedRealtime() - lastPositionUpdateTime
+        (position + (timeDelta * playbackSpeed)).toLong()
+    } else {
+        position
+    }
