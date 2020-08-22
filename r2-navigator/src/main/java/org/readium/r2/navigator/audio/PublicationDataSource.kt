@@ -62,10 +62,7 @@ internal class PublicationDataSource(private val publication: Publication) : Bas
             // Significantly improves performances, in particular with deflated ZIP entries.
             .buffered()
 
-        val skipped = inputStream.skip(dataSpec.position)
-        if (skipped < dataSpec.position) {
-            throw EOFException()
-        }
+        inputStream.skip(dataSpec.position)
 
         val bytesRemaining =
             if (dataSpec.length == LENGTH_UNSET.toLong()) inputStream.available().toLong()

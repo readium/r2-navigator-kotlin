@@ -6,21 +6,20 @@
 
 package org.readium.r2.navigator.media
 
-import android.app.PendingIntent
-import android.content.Context
 import android.media.session.PlaybackState
+import android.net.Uri
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.MediaControllerCompat.TransportControls
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import org.readium.r2.navigator.MediaNavigator
-import org.readium.r2.navigator.extensions.combine
-import org.readium.r2.navigator.extensions.elapsedPosition
-import org.readium.r2.navigator.extensions.isPlaying
+import org.readium.r2.navigator.extensions.*
 import org.readium.r2.navigator.extensions.sum
 import org.readium.r2.shared.publication.*
 import kotlin.math.roundToInt
@@ -32,12 +31,9 @@ import kotlin.time.*
 private const val playbackPositionRefreshRate: Double = 2.0  // Hz
 
 @OptIn(ExperimentalTime::class)
-internal class MediaSessionNavigator(
-    context: Context,
-    private val publication: Publication,
-    initialLocator: Locator?,
-    activityIntent: PendingIntent?,
-    mediaPlayerFactory: MediaPlayer.Factory
+class MediaSessionNavigator(
+    private val mediaSession: MediaSessionCompat,
+    private val publication: Publication
 ) : MediaNavigator {
 
     private val handler = Handler(Looper.getMainLooper())
@@ -54,34 +50,27 @@ internal class MediaSessionNavigator(
     private val totalDuration: Duration? =
         durations.sum().takeIf { it > 0.seconds }
 
-    private val session = MediaSessionCompat(context, /* log tag */ "${javaClass.simpleName}.mediaSession").apply {
-        if (activityIntent != null) {
-            setSessionActivity(activityIntent)
-        }
-    }
-
-    private val player: MediaPlayer = mediaPlayerFactory.create(context, session, publication, initialLocator)
-
-    private val controller = MediaControllerCompat(context, session).apply {
-        registerCallback(MediaControllerCallback())
-    }
-
     private val mediaMetadata = MutableLiveData<MediaMetadataCompat?>(null)
     private val playbackPosition = MutableLiveData<Duration?>(null)
 
+    private val playbackState: PlaybackStateCompat get() =
+        mediaSession.controller.playbackState
+
+    private val transportControls: TransportControls get() =
+        mediaSession.controller.transportControls
+
     init {
-        session.isActive
-        player.prepare(playWhenReady = true)
+        mediaSession.isActive
+        mediaSession.controller.registerCallback(MediaControllerCallback())
     }
 
     /**
      * Observes recursively the playback position, as long as it is playing.
      */
     private fun updatePlaybackPosition() {
-        val state = controller.playbackState
-        playbackPosition.postValue(state.elapsedPosition.milliseconds)
+        playbackPosition.postValue(playbackState.elapsedPosition.milliseconds)
 
-        if (state.state == PlaybackStateCompat.STATE_PLAYING) {
+        if (playbackState.state == PlaybackStateCompat.STATE_PLAYING) {
             val delay = (1.0 / playbackPositionRefreshRate).seconds
             handler.postDelayed(::updatePlaybackPosition,  delay.toLongMilliseconds())
         }
@@ -132,38 +121,60 @@ internal class MediaSessionNavigator(
     }
 
     override fun go(locator: Locator, animated: Boolean, completion: () -> Unit): Boolean {
-        TODO("Not yet implemented")
+        transportControls.playFromUri(Uri.parse(locator.href), Bundle().apply {
+            putParcelable("locator", locator)
+        })
+        completion()
+        return true
     }
 
-    override fun go(link: Link, animated: Boolean, completion: () -> Unit): Boolean {
-        TODO("Not yet implemented")
-    }
+    override fun go(link: Link, animated: Boolean, completion: () -> Unit): Boolean =
+        go(link.toLocator(), animated, completion)
 
     override fun goForward(animated: Boolean, completion: () -> Unit): Boolean {
-        TODO("Not yet implemented")
+        transportControls.fastForward()
+        completion()
+        return true
     }
 
     override fun goBackward(animated: Boolean, completion: () -> Unit): Boolean {
-        TODO("Not yet implemented")
+        transportControls.rewind()
+        completion()
+        return true
     }
 
 
     // MediaNavigator
 
+    override val playbackInfo: LiveData<MediaNavigator.PlaybackInfo> =
+        combine(mediaMetadata, playbackPosition) { metadata, position ->
+            val index = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
+                ?.let { publication.readingOrder.indexOfFirstWithHref(it) }
+
+            MediaNavigator.PlaybackInfo(
+                position = position ?: 0.seconds,
+                duration = index?.let { durations[index] }
+            )
+        }
+
     override fun play() {
-        controller.transportControls.play()
+        transportControls.play()
     }
 
     override fun pause() {
-        controller.transportControls.pause()
+        transportControls.pause()
     }
 
     override fun playPause() {
-        if (controller.playbackState.isPlaying) {
-            controller.transportControls.pause()
+        if (playbackState.isPlaying) {
+            transportControls.pause()
         } else {
-            controller.transportControls.play()
+            transportControls.play()
         }
+    }
+
+    override fun seekTo(position: Duration) {
+        transportControls.seekTo(position.toLongMilliseconds())
     }
 
 }
