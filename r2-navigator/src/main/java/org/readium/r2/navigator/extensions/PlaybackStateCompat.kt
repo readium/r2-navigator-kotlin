@@ -7,6 +7,8 @@ package org.readium.r2.navigator.extensions
 
 import android.os.SystemClock
 import android.support.v4.media.session.PlaybackStateCompat
+import org.readium.r2.navigator.MediaNavigator
+import org.readium.r2.navigator.MediaNavigator.Playback
 
 inline val PlaybackStateCompat.isPrepared get() =
     (state == PlaybackStateCompat.STATE_BUFFERING) ||
@@ -31,4 +33,20 @@ inline val PlaybackStateCompat.elapsedPosition: Long get() =
         (position + (timeDelta * playbackSpeed)).toLong()
     } else {
         position
+    }
+
+fun PlaybackStateCompat.toPlaybackState(): Playback.State =
+    when (state) {
+        PlaybackStateCompat.STATE_BUFFERING, PlaybackStateCompat.STATE_CONNECTING,
+        PlaybackStateCompat.STATE_SKIPPING_TO_NEXT, PlaybackStateCompat.STATE_SKIPPING_TO_PREVIOUS,
+        PlaybackStateCompat.STATE_SKIPPING_TO_QUEUE_ITEM ->
+            Playback.State.Loading
+
+        PlaybackStateCompat.STATE_PLAYING, PlaybackStateCompat.STATE_FAST_FORWARDING,
+        PlaybackStateCompat.STATE_REWINDING ->
+            Playback.State.Playing
+
+        PlaybackStateCompat.STATE_PAUSED -> Playback.State.Paused
+
+        else -> Playback.State.Idle
     }

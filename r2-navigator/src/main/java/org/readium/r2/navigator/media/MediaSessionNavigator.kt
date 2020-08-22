@@ -19,6 +19,7 @@ import android.support.v4.media.session.PlaybackStateCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import org.readium.r2.navigator.MediaNavigator
+import org.readium.r2.navigator.MediaNavigator.Playback
 import org.readium.r2.navigator.extensions.*
 import org.readium.r2.navigator.extensions.sum
 import org.readium.r2.shared.publication.*
@@ -51,10 +52,8 @@ class MediaSessionNavigator(
         durations.sum().takeIf { it > 0.seconds }
 
     private val mediaMetadata = MutableLiveData<MediaMetadataCompat?>(null)
+    private val playbackState = MutableLiveData<PlaybackStateCompat?>(null)
     private val playbackPosition = MutableLiveData<Duration?>(null)
-
-    private val playbackState: PlaybackStateCompat get() =
-        mediaSession.controller.playbackState
 
     private val transportControls: TransportControls get() =
         mediaSession.controller.transportControls
@@ -68,9 +67,10 @@ class MediaSessionNavigator(
      * Observes recursively the playback position, as long as it is playing.
      */
     private fun updatePlaybackPosition() {
-        playbackPosition.postValue(playbackState.elapsedPosition.milliseconds)
+        val state = mediaSession.controller.playbackState
+        playbackPosition.postValue(state.elapsedPosition.milliseconds)
 
-        if (playbackState.state == PlaybackStateCompat.STATE_PLAYING) {
+        if (state.state == PlaybackStateCompat.STATE_PLAYING) {
             val delay = (1.0 / playbackPositionRefreshRate).seconds
             handler.postDelayed(::updatePlaybackPosition,  delay.toLongMilliseconds())
         }
@@ -85,6 +85,7 @@ class MediaSessionNavigator(
         }
 
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
+            playbackState.postValue(state)
             if (state?.state == PlaybackState.STATE_PLAYING) {
                 updatePlaybackPosition()
             }
@@ -146,12 +147,13 @@ class MediaSessionNavigator(
 
     // MediaNavigator
 
-    override val playbackInfo: LiveData<MediaNavigator.PlaybackInfo> =
-        combine(mediaMetadata, playbackPosition) { metadata, position ->
+    override val playback: LiveData<Playback> =
+        combine(mediaMetadata, playbackState, playbackPosition) { metadata, state, position ->
             val index = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
                 ?.let { publication.readingOrder.indexOfFirstWithHref(it) }
 
-            MediaNavigator.PlaybackInfo(
+            Playback(
+                state = state?.toPlaybackState() ?: Playback.State.Idle,
                 position = position ?: 0.seconds,
                 duration = index?.let { durations[index] }
             )
@@ -166,7 +168,7 @@ class MediaSessionNavigator(
     }
 
     override fun playPause() {
-        if (playbackState.isPlaying) {
+        if (mediaSession.controller.playbackState.isPlaying) {
             transportControls.pause()
         } else {
             transportControls.play()
