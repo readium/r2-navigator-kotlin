@@ -33,7 +33,7 @@ private const val playbackPositionRefreshRate: Double = 2.0  // Hz
 @OptIn(ExperimentalTime::class)
 class MediaSessionNavigator(
     private val mediaSession: MediaSessionCompat,
-    private val publication: Publication
+    override val publication: Publication
 ) : MediaNavigator {
 
     private val handler = Handler(Looper.getMainLooper())

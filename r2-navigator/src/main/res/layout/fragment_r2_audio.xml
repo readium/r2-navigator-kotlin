@@ -82,7 +82,7 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ImageView
-        android:id="@+id/imageView"
+        android:id="@+id/coverView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_centerHorizontal="true"
@@ -94,7 +94,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/linearLayout"
         android:background="@color/colorPrimaryDark"
-        android:contentDescription="TODO"
+        tools:ignore="ContentDescription"
         />
 
 
@@ -121,7 +121,6 @@
             android:background="@android:color/transparent"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_skip_previous_white_24dp"
-            android:contentDescription="TODO"
             />
 
         <ImageButton
@@ -132,7 +131,6 @@
             android:background="@android:color/transparent"
             android:scaleType="fitCenter"
             android:src="@drawable/baseline_replay_10_white_24"
-            android:contentDescription="TODO"
             />
 
 
@@ -144,7 +142,6 @@
             android:background="@android:color/transparent"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_play_arrow_white_24dp"
-            android:contentDescription="TODO"
             />
 
         <ImageButton
@@ -155,7 +152,6 @@
             android:background="@android:color/transparent"
             android:scaleType="fitCenter"
             android:src="@drawable/baseline_forward_10_white_24"
-            android:contentDescription="TODO"
             />
 
         <ImageButton
@@ -166,7 +162,6 @@
             android:background="@android:color/transparent"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_skip_next_white_24dp"
-            android:contentDescription="TODO"
             />
 
     </LinearLayout>

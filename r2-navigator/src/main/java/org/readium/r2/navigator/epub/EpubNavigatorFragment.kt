@@ -20,19 +20,19 @@ import androidx.viewpager.widget.ViewPager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.readium.r2.navigator.*
+import org.readium.r2.navigator.NavigatorDelegate
 import org.readium.r2.navigator.R
+import org.readium.r2.navigator.R2BasicWebView
+import org.readium.r2.navigator.VisualNavigator
 import org.readium.r2.navigator.extensions.layoutDirectionIsRTL
 import org.readium.r2.navigator.extensions.positionsByResource
 import org.readium.r2.navigator.pager.R2EpubPageFragment
 import org.readium.r2.navigator.pager.R2PagerAdapter
 import org.readium.r2.navigator.pager.R2ViewPager
 import org.readium.r2.navigator.util.createFragmentFactory
-import org.readium.r2.shared.*
+import org.readium.r2.shared.COLUMN_COUNT_REF
+import org.readium.r2.shared.SCROLL_REF
 import org.readium.r2.shared.publication.*
-import org.readium.r2.shared.publication.Link
-import org.readium.r2.shared.publication.Locator
-import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.epub.EpubLayout
 import org.readium.r2.shared.publication.presentation.presentation
 import org.readium.r2.shared.publication.services.isRestricted
@@ -46,7 +46,7 @@ import kotlin.math.ceil
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class EpubNavigatorFragment private constructor(
-    internal val publication: Publication,
+    override val publication: Publication,
     private val baseUrl: String,
     private val initialLocator: Locator? = null,
     internal val listener: Listener? = null

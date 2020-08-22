@@ -6,7 +6,9 @@
 
 package org.readium.r2.navigator.extensions
 
+import android.text.format.DateUtils
 import kotlin.time.Duration
+import kotlin.time.DurationUnit
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
@@ -18,3 +20,7 @@ internal fun List<Duration>.sum(): Duration =
 @ExperimentalTime
 internal fun List<Duration?>.sum(): Duration =
     fold(0.seconds) { a, b -> a + (b ?: 0.seconds) }
+
+@ExperimentalTime
+internal fun Duration.formatElapsedTime(): String =
+    DateUtils.formatElapsedTime(toLong(DurationUnit.SECONDS))

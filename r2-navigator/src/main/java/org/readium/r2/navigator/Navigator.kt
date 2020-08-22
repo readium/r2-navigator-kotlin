@@ -12,6 +12,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
+import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.ReadingProgression
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -38,6 +39,11 @@ import kotlin.time.ExperimentalTime
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 interface Navigator {
+
+    /**
+     * Publication rendered by this navigator.
+     */
+    val publication: Publication
 
     /**
      * Current location in the publication.
