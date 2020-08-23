@@ -7,10 +7,10 @@
 package org.readium.r2.navigator
 
 import android.graphics.PointF
-import android.support.v4.media.session.PlaybackStateCompat
-import androidx.lifecycle.LiveData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import org.readium.r2.navigator.media.MediaPlayback
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
@@ -154,20 +154,9 @@ interface VisualNavigator : Navigator {
 interface MediaNavigator : Navigator {
 
     /**
-     * Holds the information about the playback.
-     *
-     * @param state State of the playback.
-     * @param position Playback position in the current resource.
-     * @param duration Duration of the current resource.
-     */
-    data class Playback(val state: State, val position: Duration, val duration: Duration?) {
-        enum class State { Idle, Loading, Playing, Paused }
-    }
-
-    /**
      * Current playback information.
      */
-    val playback: LiveData<Playback>
+    val playback: Flow<MediaPlayback>
 
     /**
      * Resumes or start the playback at the current location.

@@ -17,9 +17,10 @@ import android.support.v4.media.session.MediaControllerCompat.TransportControls
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.asLiveData
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
 import org.readium.r2.navigator.MediaNavigator
-import org.readium.r2.navigator.MediaNavigator.Playback
 import org.readium.r2.navigator.extensions.*
 import org.readium.r2.navigator.extensions.sum
 import org.readium.r2.shared.publication.*
@@ -31,7 +32,7 @@ import kotlin.time.*
  */
 private const val playbackPositionRefreshRate: Double = 2.0  // Hz
 
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
 class MediaSessionNavigator(
     private val mediaSession: MediaSessionCompat,
     override val publication: Publication
@@ -51,9 +52,9 @@ class MediaSessionNavigator(
     private val totalDuration: Duration? =
         durations.sum().takeIf { it > 0.seconds }
 
-    private val mediaMetadata = MutableLiveData<MediaMetadataCompat?>(null)
-    private val playbackState = MutableLiveData<PlaybackStateCompat?>(null)
-    private val playbackPosition = MutableLiveData<Duration?>(null)
+    private val mediaMetadata = MutableStateFlow<MediaMetadataCompat?>(null)
+    private val playbackState = MutableStateFlow<PlaybackStateCompat?>(null)
+    private val playbackPosition = MutableStateFlow<Duration?>(null)
 
     private val transportControls: TransportControls get() =
         mediaSession.controller.transportControls
@@ -68,7 +69,7 @@ class MediaSessionNavigator(
      */
     private fun updatePlaybackPosition() {
         val state = mediaSession.controller.playbackState
-        playbackPosition.postValue(state.elapsedPosition.milliseconds)
+        playbackPosition.value = state.elapsedPosition.milliseconds
 
         if (state.state == PlaybackStateCompat.STATE_PLAYING) {
             val delay = (1.0 / playbackPositionRefreshRate).seconds
@@ -81,11 +82,11 @@ class MediaSessionNavigator(
     private inner class MediaControllerCallback : MediaControllerCompat.Callback() {
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
-            mediaMetadata.postValue(metadata)
+            mediaMetadata.value = metadata
         }
 
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
-            playbackState.postValue(state)
+            playbackState.value = state
             if (state?.state == PlaybackState.STATE_PLAYING) {
                 updatePlaybackPosition()
             }
@@ -97,12 +98,13 @@ class MediaSessionNavigator(
     // Navigator
 
     override val currentLocator: LiveData<Locator?> =
-        combine(mediaMetadata, playbackPosition, ::createLocator)
+        playbackPosition.combine(mediaMetadata, ::createLocator).asLiveData()
 
     /**
      * Creates a [Locator] from the given media [metadata] and playback [position].
      */
-    private fun createLocator(metadata: MediaMetadataCompat?, position: Duration?): Locator? {
+    @Suppress("RedundantSuspendModifier")
+    private suspend fun createLocator(position: Duration?, metadata: MediaMetadataCompat?): Locator? {
         val href = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID) ?: return null
         val index = publication.readingOrder.indexOfFirstWithHref(href) ?: return null
         var locator = publication.readingOrder[index].toLocator()
@@ -147,17 +149,20 @@ class MediaSessionNavigator(
 
     // MediaNavigator
 
-    override val playback: LiveData<Playback> =
+    override val playback: Flow<MediaPlayback> =
         combine(mediaMetadata, playbackState, playbackPosition) { metadata, state, position ->
             val index = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
                 ?.let { publication.readingOrder.indexOfFirstWithHref(it) }
 
-            Playback(
-                state = state?.toPlaybackState() ?: Playback.State.Idle,
-                position = position ?: 0.seconds,
-                duration = index?.let { durations[index] }
+            MediaPlayback(
+                state = state?.toPlaybackState() ?: MediaPlayback.State.Idle,
+                timeline = MediaTimeline(
+                    position = position ?: 0.seconds,
+                    duration = index?.let { durations[index] },
+                    buffered = (position ?: 0.seconds) + 10.seconds
+                )
             )
-        }
+        }.conflate()
 
     override fun play() {
         transportControls.play()

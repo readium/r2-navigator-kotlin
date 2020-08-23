@@ -14,15 +14,13 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentFactory
 import androidx.lifecycle.Observer
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
-import kotlinx.android.synthetic.main.activity_r2_audiobook.*
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.MediaNavigator
-import org.readium.r2.navigator.MediaNavigator.Playback
 import org.readium.r2.navigator.R
 import org.readium.r2.navigator.extensions.formatElapsedTime
 import org.readium.r2.navigator.extensions.viewById
@@ -77,20 +75,23 @@ class AudioNavigatorFragment(
             publication.cover()?.let { coverView.setImageBitmap(it) }
         }
 
-        mediaNavigator.playback.observe(viewLifecycleOwner, Observer { playback ->
-            if (!isSeeking) {
-                seekBar.max = playback.duration?.inSeconds?.roundToInt() ?: 0
-                seekBar.progress = playback.position.inSeconds.roundToInt()
-            }
-            positionLabel.text = playback.position.formatElapsedTime()
-            durationLabel.text = playback.duration?.formatElapsedTime() ?: ""
-
+        mediaNavigator.playback.asLiveData().observe(viewLifecycleOwner, Observer { playback ->
             playPauseButton.setImageResource(
-                if (playback.state == Playback.State.Playing)
+                if (playback.isPlaying)
                     R.drawable.ic_pause_white_24dp
                 else
                     R.drawable.ic_play_arrow_white_24dp
             )
+
+            playback.timeline.run {
+                if (!isSeeking) {
+                    seekBar.max = duration?.inSeconds?.toInt() ?: 0
+                    seekBar.progress = position.inSeconds.toInt()
+                    buffered?.let { seekBar.secondaryProgress = it.inSeconds.toInt() }
+                }
+                positionLabel.text = position.formatElapsedTime()
+                durationLabel.text = duration?.formatElapsedTime() ?: ""
+            }
         })
 
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
