@@ -175,6 +175,14 @@ interface MediaNavigator : Navigator {
     fun playPause()
 
     /**
+     * Stops the playback.
+     *
+     * Compared to [pause], the navigator may clear its state in whatever way is appropriate. For
+     * example, recovering a player's resources.
+     */
+    fun stop()
+
+    /**
      * Seeks to the given time in the current resource.
      */
     fun seekTo(position: Duration)

@@ -134,15 +134,13 @@
             android:src="@drawable/baseline_replay_10_white_24"
             />
 
-
-        <ImageButton
+        <ToggleButton
             android:id="@+id/play_pause"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_play_arrow_white_24dp"
+            android:button="@drawable/r2_play_pause_button"
             />
 
         <ImageButton

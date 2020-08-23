@@ -159,10 +159,14 @@ class MediaSessionNavigator(
                 timeline = MediaTimeline(
                     position = position ?: 0.seconds,
                     duration = index?.let { durations[index] },
-                    buffered = (position ?: 0.seconds) + 10.seconds
+                    // Buffering is not yet supported, but will be with media2:
+                    // https://developer.android.com/reference/androidx/media2/common/SessionPlayer#getBufferedPosition()
+                    buffered = null
                 )
             )
-        }.conflate()
+        }
+        .distinctUntilChanged()
+        .conflate()
 
     override fun play() {
         transportControls.play()
@@ -178,6 +182,10 @@ class MediaSessionNavigator(
         } else {
             transportControls.play()
         }
+    }
+
+    override fun stop() {
+        transportControls.stop()
     }
 
     override fun seekTo(position: Duration) {

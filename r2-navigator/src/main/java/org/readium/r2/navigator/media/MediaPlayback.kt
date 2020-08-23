@@ -17,6 +17,6 @@ data class MediaPlayback(val state: State, val timeline: MediaTimeline) {
     enum class State { Idle, Loading, Playing, Paused }
 
     val isPlaying: Boolean get() =
-        (state == State.Playing)
+        (state == State.Playing || state == State.Loading)
 
 }

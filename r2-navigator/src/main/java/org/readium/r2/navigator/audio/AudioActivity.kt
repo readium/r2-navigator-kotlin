@@ -13,8 +13,10 @@ import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
+import org.readium.r2.navigator.MediaNavigator
 import org.readium.r2.navigator.NavigatorFragmentFactory
 import org.readium.r2.navigator.R
+import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.media.ExoMediaPlayer
 import org.readium.r2.navigator.media.MediaPlayer
 import org.readium.r2.navigator.media.MediaSessionNavigator
@@ -27,10 +29,13 @@ import org.readium.r2.shared.publication.Publication
 import timber.log.Timber
 
 @AudioSupport
-class AudioActivity : AppCompatActivity() {
+open class AudioActivity : AppCompatActivity() {
 
     private lateinit var publication: Publication
     private lateinit var player: MediaPlayer
+
+    val navigator: MediaNavigator get() =
+        supportFragmentManager.findFragmentById(R.id.audio_navigator) as MediaNavigator
 
     @OptIn(FragmentNavigator::class)
     override fun onCreate(savedInstanceState: Bundle?) {
