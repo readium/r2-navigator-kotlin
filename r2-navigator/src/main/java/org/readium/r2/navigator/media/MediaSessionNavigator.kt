@@ -4,6 +4,8 @@
  * available in the top-level LICENSE file of the project.
  */
 
+@file:OptIn(ExperimentalTime::class)
+
 package org.readium.r2.navigator.media
 
 import android.media.session.PlaybackState
@@ -32,6 +34,9 @@ import kotlin.time.*
  */
 private const val playbackPositionRefreshRate: Double = 2.0  // Hz
 
+private val skipForwardInterval: Duration = 10.seconds
+private val skipBackwardInterval: Duration = 10.seconds
+
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
 class MediaSessionNavigator(
     private val mediaSession: MediaSessionCompat,
@@ -54,7 +59,7 @@ class MediaSessionNavigator(
 
     private val mediaMetadata = MutableStateFlow<MediaMetadataCompat?>(null)
     private val playbackState = MutableStateFlow<PlaybackStateCompat?>(null)
-    private val playbackPosition = MutableStateFlow<Duration?>(null)
+    private val playbackPosition = MutableStateFlow(0.seconds)
 
     private val transportControls: TransportControls get() =
         mediaSession.controller.transportControls
@@ -69,7 +74,10 @@ class MediaSessionNavigator(
      */
     private fun updatePlaybackPosition() {
         val state = mediaSession.controller.playbackState
-        playbackPosition.value = state.elapsedPosition.milliseconds
+        val newPosition = state.elapsedPosition.milliseconds
+        if (playbackPosition.value != newPosition) {
+            playbackPosition.value = newPosition
+        }
 
         if (state.state == PlaybackStateCompat.STATE_PLAYING) {
             val delay = (1.0 / playbackPositionRefreshRate).seconds
@@ -135,13 +143,13 @@ class MediaSessionNavigator(
         go(link.toLocator(), animated, completion)
 
     override fun goForward(animated: Boolean, completion: () -> Unit): Boolean {
-        transportControls.fastForward()
+        seekBy(skipForwardInterval)
         completion()
         return true
     }
 
     override fun goBackward(animated: Boolean, completion: () -> Unit): Boolean {
-        transportControls.rewind()
+        seekBy(-skipBackwardInterval)
         completion()
         return true
     }
@@ -154,11 +162,13 @@ class MediaSessionNavigator(
             val index = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
                 ?.let { publication.readingOrder.indexOfFirstWithHref(it) }
 
+            val duration = index?.let { durations[index] }
+
             MediaPlayback(
                 state = state?.toPlaybackState() ?: MediaPlayback.State.Idle,
                 timeline = MediaTimeline(
-                    position = position ?: 0.seconds,
-                    duration = index?.let { durations[index] },
+                    position = position.coerceAtMost(duration ?: position),
+                    duration = duration,
                     // Buffering is not yet supported, but will be with media2:
                     // https://developer.android.com/reference/androidx/media2/common/SessionPlayer#getBufferedPosition()
                     buffered = null
@@ -189,7 +199,18 @@ class MediaSessionNavigator(
     }
 
     override fun seekTo(position: Duration) {
+        @Suppress("NAME_SHADOWING")
+        val position = position.coerceAtLeast(0.seconds)
+
+        // We overwrite the current position to allow skipping successively several time without
+        // having to wait for the playback position to actually update.
+        playbackPosition.value = position
+
         transportControls.seekTo(position.toLongMilliseconds())
+    }
+
+    override fun seekBy(interval: Duration) {
+        seekTo(playbackPosition.value + interval)
     }
 
 }

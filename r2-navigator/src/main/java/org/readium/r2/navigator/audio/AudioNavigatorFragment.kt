@@ -56,7 +56,7 @@ class AudioNavigatorFragment(
     private val positionLabel: TextView? by viewById(R.id.progressTime)
     private val durationLabel: TextView? by viewById(R.id.chapterTime)
     private val playPauseButton: ToggleButton? by viewById(R.id.play_pause)
-    private val fastForwardButton: View? by viewById(R.id.fast_back)
+    private val fastForwardButton: View? by viewById(R.id.fast_forward)
     private val rewindButton: View? by viewById(R.id.fast_back)
 
     private var isSeeking = false

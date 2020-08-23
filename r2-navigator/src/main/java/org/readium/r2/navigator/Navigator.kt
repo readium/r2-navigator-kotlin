@@ -187,4 +187,9 @@ interface MediaNavigator : Navigator {
      */
     fun seekTo(position: Duration)
 
+    /**
+     * Seeks relatively from the current position in the current resource.
+     */
+    fun seekBy(interval: Duration)
+
 }
