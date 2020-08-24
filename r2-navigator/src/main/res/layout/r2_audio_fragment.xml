@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<!--
+  Copyright 2020 Readium Foundation. All rights reserved.
+  Use of this source code is governed by the BSD-style license
+  available in the top-level LICENSE file of the project.
+-->
+
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    >
+    android:orientation="vertical">
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/linearLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/colorPrimaryDark"
@@ -20,20 +25,20 @@
         >
 
         <TextView
-            android:id="@+id/progressTime"
+            android:id="@+id/r2_timelinePosition"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:text="@string/zero"
             android:minWidth="40dp"
             android:textColor="@android:color/white"
-            app:layout_constraintBottom_toBottomOf="@+id/chapterView"
+            app:layout_constraintBottom_toBottomOf="@+id/r2_title"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/chapterView"
+            app:layout_constraintTop_toTopOf="@+id/r2_title"
             />
 
         <TextView
-            android:id="@+id/chapterView"
+            android:id="@+id/r2_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
@@ -45,27 +50,27 @@
             android:scrollHorizontally="true"
             android:textColor="@android:color/white"
             android:textSize="18sp"
-            app:layout_constraintEnd_toStartOf="@+id/chapterTime"
-            app:layout_constraintStart_toEndOf="@+id/progressTime"
+            app:layout_constraintEnd_toStartOf="@+id/r2_timelineDuration"
+            app:layout_constraintStart_toEndOf="@+id/r2_timelinePosition"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Chapter"
             />
 
         <TextView
-            android:id="@+id/chapterTime"
+            android:id="@+id/r2_timelineDuration"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:text="@string/zero"
             android:minWidth="40dp"
             android:textColor="@android:color/white"
-            app:layout_constraintBottom_toBottomOf="@+id/chapterView"
+            app:layout_constraintBottom_toBottomOf="@+id/r2_title"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/chapterView"
+            app:layout_constraintTop_toTopOf="@+id/r2_title"
             />
 
         <SeekBar
-            android:id="@+id/seekBar"
+            android:id="@+id/r2_timelineBar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
@@ -77,37 +82,30 @@
             android:thumbTint="@android:color/white"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/chapterView"
+            app:layout_constraintTop_toBottomOf="@+id/r2_title"
             />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ImageView
-        android:id="@+id/coverView"
-        android:layout_width="0dp"
+        android:id="@+id/r2_coverView"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_centerHorizontal="true"
+        android:layout_weight="1"
         android:adjustViewBounds="true"
         android:cropToPadding="true"
         android:scaleType="fitCenter"
-        app:layout_constraintBottom_toTopOf="@+id/controls"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/linearLayout"
         android:background="@color/colorPrimaryDark"
         tools:ignore="ContentDescription"
         />
 
-
     <LinearLayout
         android:id="@+id/controls"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="70dp"
         android:background="@color/colorPrimaryDark"
         android:gravity="center_vertical|center_horizontal"
         android:orientation="horizontal"
-        android:paddingBottom="10dp"
-        android:paddingTop="10dp"
         android:weightSum="5"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -115,7 +113,7 @@
         >
 
         <ImageButton
-            android:id="@+id/prev_chapter"
+            android:id="@+id/r2_previous"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_weight="1"
@@ -125,7 +123,7 @@
             />
 
         <ImageButton
-            android:id="@+id/fast_back"
+            android:id="@+id/r2_skipBackward"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_weight="1"
@@ -134,17 +132,18 @@
             android:src="@drawable/baseline_replay_10_white_24"
             />
 
-        <ToggleButton
-            android:id="@+id/play_pause"
+        <ImageButton
+            android:id="@+id/r2_playPause"
             android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_height="70dp"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:button="@drawable/r2_play_pause_button"
+            android:scaleType="fitCenter"
+            android:src="@drawable/r2_play_pause"
             />
 
         <ImageButton
-            android:id="@+id/fast_forward"
+            android:id="@+id/r2_skipForward"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_weight="1"
@@ -154,7 +153,7 @@
             />
 
         <ImageButton
-            android:id="@+id/next_chapter"
+            android:id="@+id/r2_next"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_weight="1"
@@ -165,4 +164,4 @@
 
     </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

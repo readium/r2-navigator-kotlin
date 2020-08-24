@@ -14,9 +14,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import org.readium.r2.navigator.MediaNavigator
-import org.readium.r2.navigator.NavigatorFragmentFactory
 import org.readium.r2.navigator.R
-import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.media.ExoMediaPlayer
 import org.readium.r2.navigator.media.MediaPlayer
 import org.readium.r2.navigator.media.MediaSessionNavigator
@@ -61,7 +59,7 @@ open class AudioActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
 
-        setContentView(R.layout.activity_r2_audio)
+        setContentView(R.layout.r2_audio_activity)
     }
 
     override fun finish() {

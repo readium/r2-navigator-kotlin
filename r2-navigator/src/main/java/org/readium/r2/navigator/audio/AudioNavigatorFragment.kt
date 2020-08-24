@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.annotation.LayoutRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentFactory
 import androidx.lifecycle.Observer
@@ -31,7 +32,8 @@ import kotlin.time.seconds
 @AudioSupport @FragmentNavigator
 @OptIn(ExperimentalTime::class)
 class AudioNavigatorFragment(
-    private val mediaNavigator: MediaNavigator
+    private val mediaNavigator: MediaNavigator,
+    @LayoutRes private val layoutId: Int = R.layout.r2_audio_fragment
 ) : Fragment(), MediaNavigator by mediaNavigator {
 
     /**
@@ -40,29 +42,32 @@ class AudioNavigatorFragment(
      * @param mediaNavigator The underlying chromeless navigator handling media playback.
      */
     class Factory(
-        private val mediaNavigator: MediaNavigator
+        private val mediaNavigator: MediaNavigator,
+        @LayoutRes private val layoutId: Int = R.layout.r2_audio_fragment
     ) : FragmentFactory() {
 
         override fun instantiate(classLoader: ClassLoader, className: String): Fragment =
             when (className) {
-                AudioNavigatorFragment::class.java.name -> AudioNavigatorFragment(mediaNavigator)
+                AudioNavigatorFragment::class.java.name -> AudioNavigatorFragment(mediaNavigator, layoutId)
                 else -> super.instantiate(classLoader, className)
             }
 
     }
 
-    private val coverView: ImageView? by viewById(R.id.coverView)
-    private val timelineBar: SeekBar? by viewById(R.id.seekBar)
-    private val positionLabel: TextView? by viewById(R.id.progressTime)
-    private val durationLabel: TextView? by viewById(R.id.chapterTime)
-    private val playPauseButton: ToggleButton? by viewById(R.id.play_pause)
-    private val fastForwardButton: View? by viewById(R.id.fast_forward)
-    private val rewindButton: View? by viewById(R.id.fast_back)
+    private val coverView: ImageView? by viewById(R.id.r2_coverView)
+    private val timelineBar: SeekBar? by viewById(R.id.r2_timelineBar)
+    private val positionTextView: TextView? by viewById(R.id.r2_timelinePosition)
+    private val durationTextView: TextView? by viewById(R.id.r2_timelineDuration)
+    private val playPauseButton: View? by viewById(R.id.r2_playPause)
+    private val playButton: View? by viewById(R.id.r2_play)
+    private val pauseButton: View? by viewById(R.id.r2_pause)
+    private val skipForwardButton: View? by viewById(R.id.r2_skipForward)
+    private val skipBackwardButton: View? by viewById(R.id.r2_skipBackward)
 
     private var isSeeking = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_r2_audio, container, false)
+        return inflater.inflate(layoutId, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -75,16 +80,16 @@ class AudioNavigatorFragment(
         }
 
         mediaNavigator.playback.asLiveData().observe(viewLifecycleOwner, Observer { playback ->
-            playPauseButton?.isChecked = playback.isPlaying
-
+            playPauseButton?.isSelected = playback.isPlaying
+            
             with(playback.timeline) {
                 if (!isSeeking) {
                     timelineBar?.max = duration?.inSeconds?.toInt() ?: 0
                     timelineBar?.progress = position.inSeconds.toInt()
                     buffered?.let { timelineBar?.secondaryProgress = it.inSeconds.toInt() }
                 }
-                positionLabel?.text = position.formatElapsedTime()
-                durationLabel?.text = duration?.formatElapsedTime() ?: ""
+                positionTextView?.text = position.formatElapsedTime()
+                durationTextView?.text = duration?.formatElapsedTime() ?: ""
             }
         })
 
@@ -93,7 +98,6 @@ class AudioNavigatorFragment(
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (!fromUser) return
                 mediaNavigator.seekTo(progress.seconds)
-                positionLabel?.text = progress.seconds.formatElapsedTime()
             }
 
             override fun onStartTrackingTouch(p0: SeekBar?) {
@@ -106,9 +110,11 @@ class AudioNavigatorFragment(
 
         })
 
+        playButton?.setOnClickListener { play() }
+        pauseButton?.setOnClickListener { pause() }
         playPauseButton?.setOnClickListener { playPause() }
-        fastForwardButton?.setOnClickListener { goForward() }
-        rewindButton?.setOnClickListener { goBackward() }
+        skipForwardButton?.setOnClickListener { goForward() }
+        skipBackwardButton?.setOnClickListener { goBackward() }
 
 //            next_chapter!!.setOnClickListener {
 //                goForward(false) {}
