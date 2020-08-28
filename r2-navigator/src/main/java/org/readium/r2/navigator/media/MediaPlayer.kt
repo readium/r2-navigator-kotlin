@@ -24,9 +24,4 @@ internal interface MediaPlayer {
      */
     fun prepare(playWhenReady: Boolean)
 
-    /**
-     * Seeks to the given [locator].
-     */
-    fun seekTo(locator: Locator): Boolean
-
 }

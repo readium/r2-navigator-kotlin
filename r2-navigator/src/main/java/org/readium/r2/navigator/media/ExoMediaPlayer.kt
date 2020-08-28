@@ -8,25 +8,27 @@ package org.readium.r2.navigator.media
 
 import android.content.Context
 import android.net.Uri
+import android.os.Bundle
+import android.os.ResultReceiver
 import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.audio.AudioAttributes
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.util.EventLogger
 import org.readium.r2.navigator.audio.PublicationDataSource
 import org.readium.r2.navigator.extensions.timeWithDuration
-import org.readium.r2.shared.publication.Link
-import org.readium.r2.shared.publication.Locator
-import org.readium.r2.shared.publication.Publication
-import org.readium.r2.shared.publication.indexOfFirstWithHref
+import org.readium.r2.shared.publication.*
 import timber.log.Timber
+import java.lang.IllegalArgumentException
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
+
+private const val EXTRA_LOCATOR = "locator"
 
 @OptIn(ExperimentalTime::class)
 internal class ExoMediaPlayer(context: Context, mediaSession: MediaSessionCompat, private val publication: Publication, private val initialLocator: Locator?) : MediaPlayer {
@@ -52,9 +54,21 @@ internal class ExoMediaPlayer(context: Context, mediaSession: MediaSessionCompat
 
     init {
         mediaSessionConnector.apply {
+            setPlaybackPreparer(PlaybackPreparer())
             setQueueNavigator(QueueNavigator(mediaSession))
             setPlayer(player)
         }
+    }
+
+    private fun seekTo(locator: Locator): Boolean {
+        val index = publication.readingOrder.indexOfFirstWithHref(locator.href)
+            ?: return false
+
+        val duration = publication.readingOrder[index].duration?.seconds
+        val time = locator.locations.timeWithDuration(duration)
+        player.seekTo(index, time?.toLongMilliseconds() ?: 0)
+
+        return true
     }
 
     // MediaPlayer
@@ -81,19 +95,42 @@ internal class ExoMediaPlayer(context: Context, mediaSession: MediaSessionCompat
         initialLocator?.let { seekTo(it) }
     }
 
-    override fun seekTo(locator: Locator): Boolean {
-        val index = publication.readingOrder.indexOfFirstWithHref(locator.href)
-            ?: return false
+    private inner class PlaybackPreparer : MediaSessionConnector.PlaybackPreparer {
 
-        val duration = publication.readingOrder[index].duration?.seconds
-        val time = locator.locations.timeWithDuration(duration)
-        player.seekTo(index, time?.toLongMilliseconds() ?: 0)
+        // We don't support any custom commands yet.
+        override fun onCommand(player: Player, controlDispatcher: ControlDispatcher, command: String, extras: Bundle?, cb: ResultReceiver?): Boolean = false
 
-        return true
+        override fun getSupportedPrepareActions(): Long =
+            PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
+            PlaybackStateCompat.ACTION_PLAY_FROM_URI or
+            PlaybackStateCompat.ACTION_PREPARE_FROM_MEDIA_ID or
+            PlaybackStateCompat.ACTION_PREPARE_FROM_URI
+
+        override fun onPrepare(playWhenReady: Boolean) {}
+
+        override fun onPrepareFromMediaId(mediaId: String, playWhenReady: Boolean, extras: Bundle?) =
+            onPrepareFromHref(href = mediaId, locator = extras?.getParcelable(EXTRA_LOCATOR), playWhenReady = playWhenReady)
+
+        override fun onPrepareFromSearch(query: String, playWhenReady: Boolean, extras: Bundle?) {}
+
+        override fun onPrepareFromUri(uri: Uri, playWhenReady: Boolean, extras: Bundle?) =
+            onPrepareFromHref(href = uri.toString(), locator = extras?.getParcelable(EXTRA_LOCATOR), playWhenReady = playWhenReady)
+
+        private fun onPrepareFromHref(href: String, locator: Locator?, playWhenReady: Boolean) {
+            if (locator?.href != null && locator.href != href) {
+                throw IllegalArgumentException("Ambiguous playback location provided. HREF `$href` doesn't match locator $locator.")
+            }
+
+            @Suppress("NAME_SHADOWING")
+            val locator = locator
+                ?: publication.linkWithHref(href)?.toLocator()
+                ?: return
+
+            player.playWhenReady = playWhenReady
+            seekTo(locator)
+        }
+
     }
-
-
-    // MediaSessionConnector.QueueNavigator
 
     private inner class QueueNavigator(mediaSession: MediaSessionCompat) : TimelineQueueNavigator(mediaSession) {
 
