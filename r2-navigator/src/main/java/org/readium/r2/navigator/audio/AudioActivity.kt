@@ -10,20 +10,18 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.support.v4.media.session.MediaSessionCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import org.readium.r2.navigator.MediaNavigator
 import org.readium.r2.navigator.R
-import org.readium.r2.navigator.media.ExoMediaPlayer
-import org.readium.r2.navigator.media.MediaPlayer
-import org.readium.r2.navigator.media.MediaSessionNavigator
+import org.readium.r2.navigator.media.*
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.FragmentNavigator
 import org.readium.r2.shared.extensions.getPublication
 import org.readium.r2.shared.extensions.putPublication
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.PublicationId
 import timber.log.Timber
 
 @AudioSupport
@@ -31,6 +29,8 @@ open class AudioActivity : AppCompatActivity() {
 
     private lateinit var publication: Publication
     private lateinit var player: MediaPlayer
+
+    private val mediaService by lazy { MediaService.connect(this) }
 
     val navigator: MediaNavigator get() =
         supportFragmentManager.findFragmentById(R.id.audio_navigator) as MediaNavigator
@@ -40,17 +40,11 @@ open class AudioActivity : AppCompatActivity() {
         publication = intent.getPublication(this)
         val initialLocator = intent.getParcelableExtra("locator") as? Locator
 
-        val mediaSession = MediaSessionCompat(this, /* log tag */ "${javaClass.simpleName}.mediaSession").apply {
-//            if (activityIntent != null) {
-//                setSessionActivity(activityIntent)
-//            }
-        }
+        val publicationId: PublicationId = publication.metadata.identifier!!
+        val media = mediaService.preparePlayback(publication, publicationId, initialLocator = initialLocator)
+        val mediaNavigator = MediaSessionNavigator(media)
+        mediaNavigator.play()
 
-        player = ExoMediaPlayer.Factory().create(this, mediaSession, publication, initialLocator).apply {
-            prepare(playWhenReady = true)
-        }
-
-        val mediaNavigator = MediaSessionNavigator(mediaSession, publication)
         mediaNavigator.currentLocator.observe(this, Observer {
             Timber.e("CURRENT ${it}")
         })

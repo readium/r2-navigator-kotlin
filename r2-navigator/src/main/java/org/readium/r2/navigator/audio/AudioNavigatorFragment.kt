@@ -6,10 +6,9 @@
 
 package org.readium.r2.navigator.audio
 
+import android.media.AudioManager
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.*
 import androidx.annotation.LayoutRes
 import androidx.fragment.app.Fragment
@@ -34,7 +33,7 @@ import kotlin.time.seconds
 class AudioNavigatorFragment(
     private val mediaNavigator: MediaNavigator,
     @LayoutRes private val layoutId: Int = R.layout.r2_audio_fragment
-) : Fragment(), MediaNavigator by mediaNavigator {
+) : Fragment(layoutId), MediaNavigator by mediaNavigator {
 
     /**
      * Factory for an [AudioNavigatorFragment].
@@ -65,10 +64,6 @@ class AudioNavigatorFragment(
     private val skipBackwardButton: View? by viewById(R.id.r2_skipBackward)
 
     private var isSeeking = false
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(layoutId, container, false)
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -123,6 +118,11 @@ class AudioNavigatorFragment(
 //            prev_chapter!!.setOnClickListener {
 //                goBackward(false) {}
 //            }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        activity?.volumeControlStream = AudioManager.STREAM_MUSIC
     }
 
 }

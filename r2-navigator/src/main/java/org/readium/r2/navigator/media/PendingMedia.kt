@@ -6,21 +6,14 @@
 
 package org.readium.r2.navigator.media
 
-import android.os.Bundle
+import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.PublicationId
 
-interface MediaPlayer {
-
-    interface Listener {
-
-        fun locatorFromMediaId(mediaId: String, extras: Bundle?): Locator?
-
-    }
-
-    var listener: Listener?
-
-    fun onDestroy()
-
-}
+@AudioSupport
+data class PendingMedia(
+    val publication: Publication,
+    val publicationId: PublicationId,
+    val locator: Locator
+)
