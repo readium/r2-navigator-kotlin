@@ -6,15 +6,25 @@
 
 package org.readium.r2.navigator.media
 
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
+
 /**
  * State of the playback at a point in time.
  *
  * @param state State of the playback.
  * @param timeline Position and duration of the current resource.
  */
-data class MediaPlayback(val state: State, val timeline: MediaTimeline) {
+@OptIn(ExperimentalTime::class)
+data class MediaPlayback(val state: State, val timeline: Timeline) {
 
     enum class State { Idle, Loading, Playing, Paused }
+
+    data class Timeline(
+        val position: Duration,
+        val duration: Duration?,
+        val buffered: Duration?
+    )
 
     val isPlaying: Boolean get() =
         (state == State.Playing || state == State.Loading)

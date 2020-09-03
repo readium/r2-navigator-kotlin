@@ -38,6 +38,7 @@ internal class ExoMediaPlayer(
     override var listener: MediaPlayer.Listener? = null
 
     private val publication: Publication = media.publication
+    private val publicationId: PublicationId = media.publicationId
 
     private val player: ExoPlayer = SimpleExoPlayer.Builder(context).build().apply {
         audioAttributes = AudioAttributes.Builder()
@@ -102,10 +103,9 @@ internal class ExoMediaPlayer(
 
         override fun onPrepareFromMediaId(mediaId: String, playWhenReady: Boolean, extras: Bundle?) {
             val locator = listener?.locatorFromMediaId(mediaId, extras) ?: return
-
-            player.stop()
             player.playWhenReady = playWhenReady
-
+            player.stop()
+            seekTo(locator)
         }
 
         override fun onPrepareFromSearch(query: String, playWhenReady: Boolean, extras: Bundle?) {}
@@ -122,7 +122,7 @@ internal class ExoMediaPlayer(
     }
 
     private fun createMediaMetadata(link: Link) = MediaMetadataCompat.Builder().apply {
-        putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, link.href)
+        putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, "${publicationId}#${link.href}")
         putString(MediaMetadataCompat.METADATA_KEY_TITLE, link.title)
     }.build()
 

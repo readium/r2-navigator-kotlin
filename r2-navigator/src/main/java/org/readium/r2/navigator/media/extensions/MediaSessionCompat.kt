@@ -4,7 +4,7 @@
  * available in the top-level LICENSE file of the project.
  */
 
-package org.readium.r2.navigator.extensions
+package org.readium.r2.navigator.media.extensions
 
 import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat

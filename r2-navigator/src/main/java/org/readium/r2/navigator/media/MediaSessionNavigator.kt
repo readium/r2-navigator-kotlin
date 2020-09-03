@@ -20,10 +20,12 @@ import androidx.lifecycle.asLiveData
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import org.readium.r2.navigator.MediaNavigator
-import org.readium.r2.navigator.extensions.*
 import org.readium.r2.navigator.extensions.sum
+import org.readium.r2.navigator.media.extensions.*
+import org.readium.r2.navigator.media.extensions.resourceHref
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.publication.*
+import timber.log.Timber
 import kotlin.math.roundToInt
 import kotlin.time.*
 
@@ -40,17 +42,24 @@ private val skipBackwardInterval: Duration = 10.seconds
 @AudioSupport
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
 class MediaSessionNavigator(
-    private val media: Media
+    override val publication: Publication,
+    val publicationId: PublicationId,
+    private val controller: MediaControllerCompat
 ) : MediaNavigator {
 
-    override val publication: Publication get() = media.publication
+    /**
+     * Indicates whether the media session is loaded with a resource from this [publication]. This
+     * is necessary because a single media session could be used to play multiple publications.
+     */
+    private val isActive: Boolean get() =
+        controller.publicationId == publicationId
 
     private val handler = Handler(Looper.getMainLooper())
 
     private var playWhenReady: Boolean = false
 
     private val needsPlaying: Boolean get() =
-        playWhenReady && !media.controller.playbackState.isPlaying
+        playWhenReady && !controller.playbackState.isPlaying
 
     /**
      * Duration of each reading order resource.
@@ -70,18 +79,18 @@ class MediaSessionNavigator(
     private val playbackPosition = MutableStateFlow(0.seconds)
 
     init {
-        media.controller.registerCallback(MediaControllerCallback())
+        controller.registerCallback(MediaControllerCallback())
     }
 
-    private val transportControls: TransportControls get() = media.controller.transportControls
+    private val transportControls: TransportControls get() = controller.transportControls
 
     /**
      * Observes recursively the playback position, as long as it is playing.
      */
     private fun updatePlaybackPosition() {
-        if (!media.isActive) return
+        if (!isActive) return
 
-        val state = media.controller.playbackState
+        val state = controller.playbackState
         val newPosition = state.elapsedPosition.milliseconds
         if (playbackPosition.value != newPosition) {
             playbackPosition.value = newPosition
@@ -98,13 +107,13 @@ class MediaSessionNavigator(
     private inner class MediaControllerCallback : MediaControllerCompat.Callback() {
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
-            if (!media.isActive) return
+            if (!isActive) return
 
             mediaMetadata.value = metadata
         }
 
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
-            if (!media.isActive) return
+            if (!isActive) return
 
             playbackState.value = state
             if (state?.state == PlaybackState.STATE_PLAYING) {
@@ -116,7 +125,7 @@ class MediaSessionNavigator(
         override fun onSessionEvent(event: String?, extras: Bundle?) {
             super.onSessionEvent(event, extras)
 
-            if (event == MediaService.EVENT_PUBLICATION_CHANGED && extras?.getString(MediaService.EXTRA_PUBLICATION_ID) == media.publicationId && playWhenReady && needsPlaying) {
+            if (event == MediaService.EVENT_PUBLICATION_CHANGED && extras?.getString(MediaService.EXTRA_PUBLICATION_ID) == publicationId && playWhenReady && needsPlaying) {
                 play()
             }
         }
@@ -127,7 +136,7 @@ class MediaSessionNavigator(
     // Navigator
 
     override val currentLocator: LiveData<Locator?> =
-        playbackPosition.combine(mediaMetadata, ::createLocator).asLiveData()
+        combine(playbackPosition, mediaMetadata, ::createLocator).asLiveData()
 
     /**
      * Creates a [Locator] from the given media [metadata] and playback [position].
@@ -153,9 +162,9 @@ class MediaSessionNavigator(
     }
 
     override fun go(locator: Locator, animated: Boolean, completion: () -> Unit): Boolean {
-        if (!media.isActive) return false
+        if (!isActive) return false
 
-        transportControls.playFromUri(Uri.parse(locator.href), Bundle().apply {
+        transportControls.playFromMediaId("$publicationId#${locator.href}", Bundle().apply {
             putParcelable("locator", locator)
         })
         completion()
@@ -166,7 +175,7 @@ class MediaSessionNavigator(
         go(link.toLocator(), animated, completion)
 
     override fun goForward(animated: Boolean, completion: () -> Unit): Boolean {
-        if (!media.isActive) return false
+        if (!isActive) return false
 
         seekRelative(skipForwardInterval)
         completion()
@@ -174,7 +183,7 @@ class MediaSessionNavigator(
     }
 
     override fun goBackward(animated: Boolean, completion: () -> Unit): Boolean {
-        if (!media.isActive) return false
+        if (!isActive) return false
 
         seekRelative(-skipBackwardInterval)
         completion()
@@ -186,14 +195,16 @@ class MediaSessionNavigator(
 
     override val playback: Flow<MediaPlayback> =
         combine(mediaMetadata, playbackState, playbackPosition) { metadata, state, position ->
-            val index = metadata?.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
-                ?.let { publication.readingOrder.indexOfFirstWithHref(it) }
+            val index = metadata?.resourceHref?.let { publication.readingOrder.indexOfFirstWithHref(it) }
+            if (index == null) {
+                Timber.e("Can't find resource index in publication for media ID `${metadata?.id}`.")
+            }
 
             val duration = index?.let { durations[index] }
 
             MediaPlayback(
                 state = state?.toPlaybackState() ?: MediaPlayback.State.Idle,
-                timeline = MediaTimeline(
+                timeline = MediaPlayback.Timeline(
                     position = position.coerceAtMost(duration ?: position),
                     duration = duration,
                     // Buffering is not yet supported, but will be with media2:
@@ -206,7 +217,7 @@ class MediaSessionNavigator(
         .conflate()
 
     override fun play() {
-        if (!media.isActive) {
+        if (!isActive) {
             playWhenReady = true
             return
         }
@@ -214,14 +225,14 @@ class MediaSessionNavigator(
     }
 
     override fun pause() {
-        if (!media.isActive) return
+        if (!isActive) return
         transportControls.pause()
     }
 
     override fun playPause() {
-        if (!media.isActive) return
+        if (!isActive) return
 
-        if (media.controller.playbackState.isPlaying) {
+        if (controller.playbackState.isPlaying) {
             transportControls.pause()
         } else {
             transportControls.play()
@@ -229,12 +240,12 @@ class MediaSessionNavigator(
     }
 
     override fun stop() {
-        if (!media.isActive) return
+        if (!isActive) return
         transportControls.stop()
     }
 
     override fun seekTo(position: Duration) {
-        if (!media.isActive) return
+        if (!isActive) return
 
         @Suppress("NAME_SHADOWING")
         val position = position.coerceAtLeast(0.seconds)
@@ -247,7 +258,7 @@ class MediaSessionNavigator(
     }
 
     override fun seekRelative(offset: Duration) {
-        if (!media.isActive) return
+        if (!isActive) return
 
         seekTo(playbackPosition.value + offset)
     }

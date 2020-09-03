@@ -41,8 +41,7 @@ open class AudioActivity : AppCompatActivity() {
         val initialLocator = intent.getParcelableExtra("locator") as? Locator
 
         val publicationId: PublicationId = publication.metadata.identifier!!
-        val media = mediaService.preparePlayback(publication, publicationId, initialLocator = initialLocator)
-        val mediaNavigator = MediaSessionNavigator(media)
+        val mediaNavigator = mediaService.getNavigator(publication, publicationId, initialLocator)
         mediaNavigator.play()
 
         mediaNavigator.currentLocator.observe(this, Observer {

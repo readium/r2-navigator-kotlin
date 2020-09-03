@@ -12,28 +12,28 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Process
 import android.support.v4.media.MediaBrowserCompat
+import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
+import androidx.lifecycle.asFlow
 import androidx.media.MediaBrowserServiceCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
-import org.readium.r2.navigator.extensions.publicationId
+import org.readium.r2.navigator.MediaNavigator
+import org.readium.r2.navigator.media.extensions.publicationId
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.extensions.splitAt
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.PublicationId
 import org.readium.r2.shared.publication.toLocator
-import org.readium.r2.shared.util.Try
 import timber.log.Timber
 import kotlin.reflect.KMutableProperty0
 
 @AudioSupport
 @OptIn(ExperimentalCoroutinesApi::class)
 open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, CoroutineScope by MainScope() {
-
-    open suspend fun openPublication(publicationId: PublicationId): Try<Publication, Publication.OpeningError> =
-        Try.failure(Publication.OpeningError.Unavailable(null))
 
     /**
      * @param packageName The package name of the application which is requesting access.
@@ -47,7 +47,9 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
     open fun onCreatePlayer(mediaSession: MediaSessionCompat, media: PendingMedia): MediaPlayer =
         ExoMediaPlayer(this, mediaSession, media)
 
-    open fun onCurrentLocatorChanged(publicationId: PublicationId, locator: Locator) {}
+    open fun onCurrentLocatorChanged(publicationId: PublicationId, locator: Locator) {
+        Timber.e("onCurrentLocatorChanged($publicationId, $locator)")
+    }
 
     private var player: MediaPlayer? = null
         set(value) {
@@ -66,15 +68,15 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
     // MediaPlayer.Listener
 
     override fun locatorFromMediaId(mediaId: String, extras: Bundle?): Locator? {
-        val media = currentMedia.value ?: return null
+        val navigator = navigator.value ?: return null
         val (publicationId, href) = mediaId.splitAt("#")
 
-        if (media.publicationId != publicationId) {
+        if (navigator.publicationId != publicationId) {
             return null
         }
 
         val locator = (extras?.getParcelable(EXTRA_LOCATOR) as? Locator)
-            ?: href?.let { media.publication.linkWithHref(it)?.toLocator() }
+            ?: href?.let { navigator.publication.linkWithHref(it)?.toLocator() }
 
         if (locator != null && href != null && locator.href != href) {
             Timber.e("Ambiguous playback location provided. HREF `$href` doesn't match locator $locator.")
@@ -97,21 +99,25 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
 
         launch {
             pendingMedia.receiveAsFlow().collect {
-                mediaSession.publicationId = it.publicationId
                 player = onCreatePlayer(mediaSession, it)
-                currentMedia.value = Media(it.publication, it.publicationId, mediaSession.controller)
+                mediaSession.publicationId = it.publicationId
             }
+        }
 
-//            navigator
-//                .flatMapLatest { navigator ->
-//                    navigator ?: return@flatMapLatest emptyFlow<Pair<PublicationId, Locator?>>()
-//                    navigator.currentLocator.asFlow().map { Pair(navigator.publicationId, it) }
-//                }
-//                .collect { (publicationId, locator) ->
-//                    if (locator != null) {
-//                        onCurrentLocatorChanged(publicationId, locator)
-//                    }
-//                }
+        launch {
+            navigator
+                .onEach {
+                    Timber.e(it.toString())
+                }
+                .flatMapLatest { navigator ->
+                    navigator ?: return@flatMapLatest emptyFlow<Pair<PublicationId, Locator?>>()
+                    navigator.currentLocator.asFlow().map { Pair(navigator.publicationId, it) }
+                }
+                .collect { (publicationId, locator) ->
+                    if (locator != null) {
+                        onCurrentLocatorChanged(publicationId, locator)
+                    }
+                }
         }
     }
 
@@ -148,7 +154,7 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
         const val EXTRA_PUBLICATION_ID = "org.readium.r2.navigator.EXTRA_PUBLICATION_ID"
 
         private val pendingMedia = Channel<PendingMedia>(Channel.CONFLATED)
-        private val currentMedia = MutableStateFlow<Media?>(null)
+        private val navigator = MutableStateFlow<MediaSessionNavigator?>(null)
 
         @Volatile private var connection: Connection? = null
         @Volatile private var mediaSession: MediaSessionCompat? = null
@@ -167,17 +173,33 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
 
     class Connection internal constructor(private val context: Context, private val serviceClass: Class<MediaService>) {
 
-        fun preparePlayback(publication: Publication, publicationId: PublicationId, initialLocator: Locator?): Media {
+        val currentNavigator: StateFlow<MediaNavigator?> get() = navigator
+
+        fun getNavigator(publication: Publication, publicationId: PublicationId, initialLocator: Locator?): MediaNavigator {
             context.startService(Intent(context, serviceClass))
+
+            navigator.value
+                ?.takeIf { it.publicationId == publicationId }
+                ?.let {
+                    initialLocator?.let { locator -> it.go(locator) }
+                    return it
+                }
+
             pendingMedia.offer(PendingMedia(publication, publicationId, locator = initialLocator ?: publication.readingOrder.first().toLocator()))
-            return Media(publication, publicationId, getMediaSession(context, serviceClass).controller)
+
+            return MediaSessionNavigator(publication, publicationId, getMediaSession(context, serviceClass).controller)
+                .also {
+                    navigator.value?.stop()
+                    navigator.value = it
+                }
         }
 
     }
 
 }
 
-fun <T> createOnceIn(property: KMutableProperty0<T?>, owner: Any, factory: () -> T): T =
+// FIXME: Move to r2-shared
+internal fun <T> createOnceIn(property: KMutableProperty0<T?>, owner: Any, factory: () -> T): T =
     property.get() ?: synchronized(owner) {
         property.get() ?: factory().also {
             property.set(it)
