@@ -6,21 +6,19 @@
 
 package org.readium.r2.navigator.media
 
+import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Process
 import android.support.v4.media.MediaBrowserCompat
-import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
 import androidx.lifecycle.asFlow
 import androidx.media.MediaBrowserServiceCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
-import org.readium.r2.navigator.MediaNavigator
 import org.readium.r2.navigator.media.extensions.publicationId
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.extensions.splitAt
@@ -47,9 +45,7 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
     open fun onCreatePlayer(mediaSession: MediaSessionCompat, media: PendingMedia): MediaPlayer =
         ExoMediaPlayer(this, mediaSession, media)
 
-    open fun onCurrentLocatorChanged(publicationId: PublicationId, locator: Locator) {
-        Timber.e("onCurrentLocatorChanged($publicationId, $locator)")
-    }
+    open fun onCurrentLocatorChanged(publicationId: PublicationId, locator: Locator) {}
 
     private var player: MediaPlayer? = null
         set(value) {
@@ -83,6 +79,14 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
         }
 
         return locator
+    }
+
+    override fun onNotificationPosted(notificationId: Int, notification: Notification) {
+        startForeground(notificationId, notification)
+    }
+
+    override fun onNotificationCancelled(notificationId: Int) {
+        stopForeground(true)
     }
 
     // Service
@@ -132,6 +136,8 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
         }
 
         player?.onDestroy()
+        navigator.value?.stop()
+        navigator.value = null
     }
 
     // MediaBrowserServiceCompat
@@ -159,31 +165,28 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
         @Volatile private var connection: Connection? = null
         @Volatile private var mediaSession: MediaSessionCompat? = null
 
-        fun connect(context: Context, serviceClass: Class<MediaService> = MediaService::class.java): Connection =
+        fun connect(context: Context, serviceClass: Class<*> = MediaService::class.java): Connection =
             createOnceIn(this::connection, this) {
                 Connection(context, serviceClass)
             }
 
-        private fun getMediaSession(context: Context, serviceClass: Class<MediaService>): MediaSessionCompat =
+        private fun getMediaSession(context: Context, serviceClass: Class<*>): MediaSessionCompat =
             createOnceIn(this::mediaSession, this) {
                 MediaSessionCompat(context, /* log tag */ serviceClass.simpleName)
             }
 
     }
 
-    class Connection internal constructor(private val context: Context, private val serviceClass: Class<MediaService>) {
+    class Connection internal constructor(private val context: Context, private val serviceClass: Class<*>) {
 
-        val currentNavigator: StateFlow<MediaNavigator?> get() = navigator
+        val currentNavigator: StateFlow<MediaSessionNavigator?> get() = navigator
 
-        fun getNavigator(publication: Publication, publicationId: PublicationId, initialLocator: Locator?): MediaNavigator {
+        fun getNavigator(publication: Publication, publicationId: PublicationId, initialLocator: Locator?): MediaSessionNavigator {
             context.startService(Intent(context, serviceClass))
 
             navigator.value
                 ?.takeIf { it.publicationId == publicationId }
-                ?.let {
-                    initialLocator?.let { locator -> it.go(locator) }
-                    return it
-                }
+                ?.let { return it }
 
             pendingMedia.offer(PendingMedia(publication, publicationId, locator = initialLocator ?: publication.readingOrder.first().toLocator()))
 

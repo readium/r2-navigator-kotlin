@@ -7,7 +7,6 @@
 package org.readium.r2.navigator.media
 
 import android.media.session.PlaybackState
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -35,9 +34,9 @@ import kotlin.time.*
 private const val playbackPositionRefreshRate: Double = 2.0  // Hz
 
 @OptIn(ExperimentalTime::class)
-private val skipForwardInterval: Duration = 10.seconds
+private val skipForwardInterval: Duration = 30.seconds
 @OptIn(ExperimentalTime::class)
-private val skipBackwardInterval: Duration = 10.seconds
+private val skipBackwardInterval: Duration = 30.seconds
 
 @AudioSupport
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
