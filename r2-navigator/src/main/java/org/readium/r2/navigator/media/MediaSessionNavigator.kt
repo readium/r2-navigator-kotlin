@@ -55,6 +55,9 @@ class MediaSessionNavigator(
     private val isActive: Boolean get() =
         controller.publicationId == publicationId
 
+    // FIXME: ExoPlayer's media session connector doesn't handle the playback speed yet, so we need the player instance for now
+    internal var player: MediaPlayer? = null
+
     private val handler = Handler(Looper.getMainLooper())
 
     private var playWhenReady: Boolean = false
@@ -205,6 +208,11 @@ class MediaSessionNavigator(
 
             MediaPlayback(
                 state = state?.toPlaybackState() ?: MediaPlayback.State.Idle,
+
+                // FIXME: ExoPlayer's media session connector doesn't handle the playback speed yet, so I used a custom solution until we create our own connector
+//                rate = state?.playbackSpeed?.toDouble() ?: 1.0,
+                rate = player?.playbackRate ?: 1.0,
+
                 timeline = MediaPlayback.Timeline(
                     position = position.coerceAtMost(duration ?: position),
                     duration = duration,
@@ -216,6 +224,13 @@ class MediaSessionNavigator(
         }
         .distinctUntilChanged()
         .conflate()
+
+    override fun setPlaybackRate(rate: Double) {
+        if (!isActive) return
+        // FIXME: ExoPlayer's media session connector doesn't handle the playback speed yet, so I used a custom solution until we create our own connector
+//        transportControls.setPlaybackSpeed(rate.toFloat())
+        player?.playbackRate = rate
+    }
 
     override fun play() {
         if (!isActive) {

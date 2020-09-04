@@ -159,6 +159,13 @@ interface MediaNavigator : Navigator {
     val playback: Flow<MediaPlayback>
 
     /**
+     * Sets the speed of the media playback.
+     *
+     * Normal speed is 1.0 and 0.0 is incorrect.
+     */
+    fun setPlaybackRate(rate: Double)
+
+    /**
      * Resumes or start the playback at the current location.
      */
     fun play()

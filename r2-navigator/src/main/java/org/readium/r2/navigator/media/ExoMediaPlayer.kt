@@ -60,6 +60,14 @@ internal class ExoMediaPlayer(
 //        addAnalyticsListener(EventLogger(null))
     }
 
+    // FIXME: ExoPlayer's media session connector doesn't handle the playback speed yet, so I used a custom solution until we create our own connector
+    override var playbackRate: Double
+        get() = player.playbackParameters.speed.toDouble()
+        set(speed) {
+            val pitch = player.playbackParameters.pitch
+            player.setPlaybackParameters(PlaybackParameters(speed.toFloat(), pitch))
+        }
+
     private val notificationManager =
         PlayerNotificationManager.createWithNotificationChannel(
             context,

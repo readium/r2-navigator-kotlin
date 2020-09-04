@@ -13,10 +13,11 @@ import kotlin.time.ExperimentalTime
  * State of the playback at a point in time.
  *
  * @param state State of the playback.
+ * @param rate Speed of the playback, defaults to 1.0.
  * @param timeline Position and duration of the current resource.
  */
 @OptIn(ExperimentalTime::class)
-data class MediaPlayback(val state: State, val timeline: Timeline) {
+data class MediaPlayback(val state: State, val rate: Double, val timeline: Timeline) {
 
     enum class State {
         Idle, Loading, Playing, Paused;

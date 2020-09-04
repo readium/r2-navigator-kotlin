@@ -28,6 +28,9 @@ interface MediaPlayer {
 
     }
 
+    // FIXME: ExoPlayer's media session connector doesn't handle the playback speed yet, so I used a custom solution until we create our own connector
+    var playbackRate: Double
+
     var listener: Listener?
 
     fun onDestroy()

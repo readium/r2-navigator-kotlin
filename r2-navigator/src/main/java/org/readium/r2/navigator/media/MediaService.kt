@@ -25,8 +25,11 @@ import org.readium.r2.navigator.extensions.let
 import org.readium.r2.navigator.media.extensions.publicationId
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.extensions.splitAt
-import org.readium.r2.shared.publication.*
+import org.readium.r2.shared.publication.Locator
+import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.PublicationId
 import org.readium.r2.shared.publication.services.cover
+import org.readium.r2.shared.publication.toLocator
 import timber.log.Timber
 import kotlin.reflect.KMutableProperty0
 
@@ -58,6 +61,8 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
             field = value?.apply {
                 listener = this@MediaService
             }
+
+            navigator.value?.player = value
         }
 
     protected val mediaSession: MediaSessionCompat get() = getMediaSession(this, javaClass)
@@ -120,6 +125,10 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
                 player = onCreatePlayer(mediaSession, it)
                 mediaSession.publicationId = it.publicationId
             }
+        }
+
+        launch {
+            navigator.collect { it?.player = player }
         }
 
         launch {
