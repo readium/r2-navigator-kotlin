@@ -18,7 +18,12 @@ import kotlin.time.ExperimentalTime
 @OptIn(ExperimentalTime::class)
 data class MediaPlayback(val state: State, val timeline: Timeline) {
 
-    enum class State { Idle, Loading, Playing, Paused }
+    enum class State {
+        Idle, Loading, Playing, Paused;
+
+        val isPlaying: Boolean get() =
+            (this == Playing || this == Loading)
+    }
 
     data class Timeline(
         val position: Duration,
@@ -26,7 +31,6 @@ data class MediaPlayback(val state: State, val timeline: Timeline) {
         val buffered: Duration?
     )
 
-    val isPlaying: Boolean get() =
-        (state == State.Playing || state == State.Loading)
+    val isPlaying: Boolean get() = state.isPlaying
 
 }

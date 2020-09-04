@@ -7,9 +7,9 @@
 package org.readium.r2.navigator.media
 
 import android.app.Notification
-import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
-import androidx.core.content.ContextCompat
+import android.os.ResultReceiver
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.PublicationId
@@ -20,8 +20,11 @@ interface MediaPlayer {
 
         fun locatorFromMediaId(mediaId: String, extras: Bundle?): Locator?
 
+        suspend fun coverOfPublication(publication: Publication, publicationId: PublicationId): Bitmap?
+
         fun onNotificationPosted(notificationId: Int, notification: Notification)
         fun onNotificationCancelled(notificationId: Int)
+        fun onCommand(command: String, args: Bundle?, cb: ResultReceiver?): Boolean
 
     }
 

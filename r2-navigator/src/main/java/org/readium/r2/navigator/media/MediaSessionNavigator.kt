@@ -21,12 +21,14 @@ import kotlinx.coroutines.flow.*
 import org.readium.r2.navigator.MediaNavigator
 import org.readium.r2.navigator.extensions.sum
 import org.readium.r2.navigator.media.extensions.*
-import org.readium.r2.navigator.media.extensions.resourceHref
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.publication.*
 import timber.log.Timber
 import kotlin.math.roundToInt
-import kotlin.time.*
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
+import kotlin.time.milliseconds
+import kotlin.time.seconds
 
 /**
  * Rate at which the current locator is broadcasted during playback.
@@ -43,7 +45,7 @@ private val skipBackwardInterval: Duration = 30.seconds
 class MediaSessionNavigator(
     override val publication: Publication,
     val publicationId: PublicationId,
-    private val controller: MediaControllerCompat
+    val controller: MediaControllerCompat
 ) : MediaNavigator {
 
     /**

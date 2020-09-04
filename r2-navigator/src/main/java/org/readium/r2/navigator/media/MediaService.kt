@@ -10,8 +10,10 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Process
+import android.os.ResultReceiver
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.lifecycle.asFlow
@@ -19,13 +21,12 @@ import androidx.media.MediaBrowserServiceCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+import org.readium.r2.navigator.extensions.let
 import org.readium.r2.navigator.media.extensions.publicationId
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.extensions.splitAt
-import org.readium.r2.shared.publication.Locator
-import org.readium.r2.shared.publication.Publication
-import org.readium.r2.shared.publication.PublicationId
-import org.readium.r2.shared.publication.toLocator
+import org.readium.r2.shared.publication.*
+import org.readium.r2.shared.publication.services.cover
 import timber.log.Timber
 import kotlin.reflect.KMutableProperty0
 
@@ -59,7 +60,7 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
             }
         }
 
-    private val mediaSession: MediaSessionCompat get() = getMediaSession(this, javaClass)
+    protected val mediaSession: MediaSessionCompat get() = getMediaSession(this, javaClass)
 
     // MediaPlayer.Listener
 
@@ -81,13 +82,26 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
         return locator
     }
 
+    override suspend fun coverOfPublication(publication: Publication, publicationId: PublicationId): Bitmap? =
+        publication.cover()
+
+    private var notificationId: Int? = null
+    private var notification: Notification? = null
+
     override fun onNotificationPosted(notificationId: Int, notification: Notification) {
+        this.notificationId = notificationId
+        this.notification = notification
         startForeground(notificationId, notification)
     }
 
     override fun onNotificationCancelled(notificationId: Int) {
+        this.notificationId = null
+        this.notification = null
         stopForeground(true)
     }
+
+    // We don't support any custom commands by default.
+    override fun onCommand(command: String, args: Bundle?, cb: ResultReceiver?): Boolean = false
 
     // Service
 
@@ -110,9 +124,6 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
 
         launch {
             navigator
-                .onEach {
-                    Timber.e(it.toString())
-                }
                 .flatMapLatest { navigator ->
                     navigator ?: return@flatMapLatest emptyFlow<Pair<PublicationId, Locator?>>()
                     navigator.currentLocator.asFlow().map { Pair(navigator.publicationId, it) }
@@ -120,6 +131,23 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
                 .collect { (publicationId, locator) ->
                     if (locator != null) {
                         onCurrentLocatorChanged(publicationId, locator)
+                    }
+                }
+        }
+
+        launch {
+            navigator
+                .flatMapLatest { navigator ->
+                    navigator?.playback?.map { it.state }
+                        ?: flowOf(MediaPlayback.State.Idle)
+                }
+                .collect {
+                    if (it.isPlaying) {
+                        let(notificationId, notification) { id, note ->
+                            startForeground(id, note)
+                        }
+                    } else {
+                        stopForeground(false)
                     }
                 }
         }
@@ -159,10 +187,10 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
         const val EVENT_PUBLICATION_CHANGED = "org.readium.r2.navigator.EVENT_PUBLICATION_CHANGED"
         const val EXTRA_PUBLICATION_ID = "org.readium.r2.navigator.EXTRA_PUBLICATION_ID"
 
+        @Volatile private var connection: Connection? = null
+
         private val pendingMedia = Channel<PendingMedia>(Channel.CONFLATED)
         private val navigator = MutableStateFlow<MediaSessionNavigator?>(null)
-
-        @Volatile private var connection: Connection? = null
         @Volatile private var mediaSession: MediaSessionCompat? = null
 
         fun connect(context: Context, serviceClass: Class<*> = MediaService::class.java): Connection =

@@ -10,7 +10,6 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.os.ResultReceiver
@@ -26,14 +25,15 @@ import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.readium.r2.navigator.R
 import org.readium.r2.navigator.audio.PublicationDataSource
 import org.readium.r2.navigator.extensions.timeWithDuration
 import org.readium.r2.shared.AudioSupport
-import org.readium.r2.shared.extensions.tryOrNull
 import org.readium.r2.shared.publication.*
-import java.net.URL
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
@@ -67,7 +67,7 @@ internal class ExoMediaPlayer(
             R.string.r2_media_notification_channel_name,
             R.string.r2_media_notification_channel_description,
             MEDIA_NOTIFICATION_ID,
-            DescriptionAdapter(mediaSession.controller),
+            DescriptionAdapter(mediaSession.controller, media),
             NotificationListener()
         ).apply {
             setMediaSessionToken(mediaSession.sessionToken)
@@ -126,8 +126,8 @@ internal class ExoMediaPlayer(
 
     private inner class PlaybackPreparer : MediaSessionConnector.PlaybackPreparer {
 
-        // We don't support any custom commands for now.
-        override fun onCommand(player: Player, controlDispatcher: ControlDispatcher, command: String, extras: Bundle?, cb: ResultReceiver?): Boolean = false
+        override fun onCommand(player: Player, controlDispatcher: ControlDispatcher, command: String, extras: Bundle?, cb: ResultReceiver?): Boolean =
+            listener?.onCommand(command, extras, cb) ?: false
 
         override fun getSupportedPrepareActions(): Long =
             PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
@@ -138,7 +138,6 @@ internal class ExoMediaPlayer(
         override fun onPrepareFromMediaId(mediaId: String, playWhenReady: Boolean, extras: Bundle?) {
             val locator = listener?.locatorFromMediaId(mediaId, extras) ?: return
             player.playWhenReady = playWhenReady
-            player.stop()
             seekTo(locator)
         }
 
@@ -169,55 +168,29 @@ internal class ExoMediaPlayer(
 
     }
 
-    private inner class DescriptionAdapter(private val controller: MediaControllerCompat) : PlayerNotificationManager.MediaDescriptionAdapter {
+    private inner class DescriptionAdapter(private val controller: MediaControllerCompat, private val media: PendingMedia) : PlayerNotificationManager.MediaDescriptionAdapter {
 
-        var currentIconUri: Uri? = null
-        var currentBitmap: Bitmap? = null
+        var cover: Bitmap? = null
 
         override fun createCurrentContentIntent(player: Player): PendingIntent? =
             controller.sessionActivity
 
         override fun getCurrentContentText(player: Player): CharSequence? =
-            controller.metadata.description.subtitle
+            publication.metadata.title
 
         override fun getCurrentContentTitle(player: Player): CharSequence =
             controller.metadata.description.title ?: publication.metadata.title
 
-        override fun getCurrentLargeIcon(
-            player: Player,
-            callback: PlayerNotificationManager.BitmapCallback
-        ): Bitmap? {
-            val iconUri = controller.metadata.description.iconUri
-            return if (currentIconUri != iconUri || currentBitmap == null) {
-                currentIconUri = iconUri
-                launch {
-                    currentBitmap = iconUri?.let { resolveUriAsBitmap(it) }
-                    currentBitmap?.let { callback.onBitmap(it) }
-                }
-                null
-            } else {
-                currentBitmap
+        override fun getCurrentLargeIcon(player: Player, callback: PlayerNotificationManager.BitmapCallback): Bitmap? {
+            if (cover != null) {
+                return cover
             }
-        }
 
-        private suspend fun resolveUriAsBitmap(uri: Uri): Bitmap? {
-            val link = publication.linkWithHref(uri.toString())
-            return when {
-                link != null -> {
-                    publication.get(link).read()
-                        .map { BitmapFactory.decodeByteArray(it, 0, it.size) }
-                        .getOrNull()
-                }
-                uri.scheme != null -> {
-                    withContext(Dispatchers.IO) {
-                        tryOrNull {
-                            URL(uri.toString()).readBytes()
-                                .let { BitmapFactory.decodeByteArray(it, 0, it.size) }
-                        }
-                    }
-                }
-                else -> null
+            launch {
+                cover = listener?.coverOfPublication(media.publication, media.publicationId)
+                cover?.let { callback.onBitmap(it) }
             }
+            return null
         }
 
     }
@@ -225,7 +198,9 @@ internal class ExoMediaPlayer(
     private fun createMediaMetadata(link: Link) = MediaMetadataCompat.Builder().apply {
         putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, "${publicationId}#${link.href}")
         putString(MediaMetadataCompat.METADATA_KEY_TITLE, link.title)
-        putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI, publication.linkWithRel("cover")?.href)
+        putString(MediaMetadataCompat.METADATA_KEY_ALBUM, publication.metadata.title)
+        putString(MediaMetadataCompat.METADATA_KEY_AUTHOR, publication.metadata.authors.joinToString(", ") { it.name }.takeIf { it.isNotBlank() })
+        putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, publication.metadata.title)
     }.build()
 
 }
