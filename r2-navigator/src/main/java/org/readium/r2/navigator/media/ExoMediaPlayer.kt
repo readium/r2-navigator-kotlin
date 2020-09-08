@@ -106,6 +106,7 @@ internal class ExoMediaPlayer(
 
     override fun onDestroy() {
         cancel()
+        mediaSessionConnector.setPlayer(null)
         notificationManager.setPlayer(null)
         player.stop(true)
         player.release()

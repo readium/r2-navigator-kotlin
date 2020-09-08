@@ -57,6 +57,8 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
     // We don't support any custom commands by default.
     open fun onCommand(command: String, args: Bundle?, cb: ResultReceiver?): Boolean = false
 
+    open fun onPlayerStopped() {}
+
     protected val mediaSession: MediaSessionCompat get() = getMediaSession(this, javaClass)
 
     private var player: MediaPlayer? = null
@@ -123,6 +125,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
             mediaSession.publicationId = null
             player = null
             navigator.value = null
+            this@MediaService.onPlayerStopped()
         }
 
     }
@@ -140,9 +143,10 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
         }
 
         launch {
-            pendingMedia.receiveAsFlow().collect {
-                player = onCreatePlayer(mediaSession, it)
-                mediaSession.publicationId = it.publicationId
+            pendingNavigator.receiveAsFlow().collect {
+                player = onCreatePlayer(mediaSession, it.media)
+                mediaSession.publicationId = it.media.publicationId
+                navigator.value = it.navigator
             }
         }
 
@@ -185,10 +189,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
         super.onDestroy()
 
         cancel()
-
         releaseMediaSession()
-
-        navigator.value?.stop()
         navigator.value = null
         player = null
     }
@@ -213,10 +214,10 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
         const val EXTRA_PUBLICATION_ID = "org.readium.r2.navigator.EXTRA_PUBLICATION_ID"
 
         @Volatile private var connection: Connection? = null
-
-        private val pendingMedia = Channel<PendingMedia>(Channel.CONFLATED)
-        private val navigator = MutableStateFlow<MediaSessionNavigator?>(null)
         @Volatile private var mediaSession: MediaSessionCompat? = null
+
+        private val navigator = MutableStateFlow<MediaSessionNavigator?>(null)
+        private val pendingNavigator = Channel<PendingNavigator>(Channel.CONFLATED)
 
         fun connect(context: Context, serviceClass: Class<*> = MediaService::class.java): Connection =
             createIfNull(this::connection, this) {
@@ -249,16 +250,18 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
                 ?.takeIf { it.publicationId == publicationId }
                 ?.let { return it }
 
-            pendingMedia.offer(PendingMedia(publication, publicationId, locator = initialLocator ?: publication.readingOrder.first().toLocator()))
+            val navigator = MediaSessionNavigator(publication, publicationId, getMediaSession(context, serviceClass).controller)
+            pendingNavigator.offer(PendingNavigator(
+                navigator = navigator,
+                media = PendingMedia(publication, publicationId, locator = initialLocator ?: publication.readingOrder.first().toLocator())
+            ))
 
-            return MediaSessionNavigator(publication, publicationId, getMediaSession(context, serviceClass).controller)
-                .also {
-                    navigator.value?.stop()
-                    navigator.value = it
-                }
+            return navigator
         }
 
     }
+
+    private class PendingNavigator(val navigator: MediaSessionNavigator, val media: PendingMedia)
 
 }
 
