@@ -111,7 +111,7 @@ class MediaSessionNavigator(
     private inner class MediaControllerCallback : MediaControllerCompat.Callback() {
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
-            if (!isActive) return
+            if (!isActive || metadata?.id == null) return
 
             mediaMetadata.value = metadata
         }
@@ -198,16 +198,20 @@ class MediaSessionNavigator(
     // MediaNavigator
 
     override val playback: Flow<MediaPlayback> =
-        combine(mediaMetadata, playbackState, playbackPosition) { metadata, state, position ->
-            val index = metadata?.resourceHref?.let { publication.readingOrder.indexOfFirstWithHref(it) }
+        combine(
+            mediaMetadata.filterNotNull(),
+            playbackState.filterNotNull(),
+            playbackPosition
+        ) { metadata, state, position ->
+            val index = metadata.resourceHref?.let { publication.readingOrder.indexOfFirstWithHref(it) }
             if (index == null) {
-                Timber.e("Can't find resource index in publication for media ID `${metadata?.id}`.")
+                Timber.e("Can't find resource index in publication for media ID `${metadata.id}`.")
             }
 
             val duration = index?.let { durations[index] }
 
             MediaPlayback(
-                state = state?.toPlaybackState() ?: MediaPlayback.State.Idle,
+                state = state.toPlaybackState(),
 
                 // FIXME: ExoPlayer's media session connector doesn't handle the playback speed yet, so I used a custom solution until we create our own connector
 //                rate = state?.playbackSpeed?.toDouble() ?: 1.0,
@@ -224,6 +228,9 @@ class MediaSessionNavigator(
         }
         .distinctUntilChanged()
         .conflate()
+
+    override val isPlaying: Boolean
+        get() = playbackState.value?.isPlaying == true
 
     override fun setPlaybackRate(rate: Double) {
         if (!isActive) return

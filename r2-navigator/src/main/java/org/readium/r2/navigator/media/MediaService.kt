@@ -35,7 +35,7 @@ import kotlin.reflect.KMutableProperty0
 
 @AudioSupport
 @OptIn(ExperimentalCoroutinesApi::class)
-open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, CoroutineScope by MainScope() {
+open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainScope() {
 
     /**
      * @param packageName The package name of the application which is requesting access.
@@ -51,6 +51,14 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
 
     open fun onCurrentLocatorChanged(publicationId: PublicationId, locator: Locator) {}
 
+    open suspend fun coverOfPublication(publication: Publication, publicationId: PublicationId): Bitmap? =
+        publication.cover()
+
+    // We don't support any custom commands by default.
+    open fun onCommand(command: String, args: Bundle?, cb: ResultReceiver?): Boolean = false
+
+    protected val mediaSession: MediaSessionCompat get() = getMediaSession(this, javaClass)
+
     private var player: MediaPlayer? = null
         set(value) {
             field?.apply {
@@ -59,54 +67,65 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
             }
 
             field = value?.apply {
-                listener = this@MediaService
+                listener = mediaPlayerListener
             }
 
             navigator.value?.player = value
         }
 
-    protected val mediaSession: MediaSessionCompat get() = getMediaSession(this, javaClass)
-
-    // MediaPlayer.Listener
-
-    override fun locatorFromMediaId(mediaId: String, extras: Bundle?): Locator? {
-        val navigator = navigator.value ?: return null
-        val (publicationId, href) = mediaId.splitAt("#")
-
-        if (navigator.publicationId != publicationId) {
-            return null
-        }
-
-        val locator = (extras?.getParcelable(EXTRA_LOCATOR) as? Locator)
-            ?: href?.let { navigator.publication.linkWithHref(it)?.toLocator() }
-
-        if (locator != null && href != null && locator.href != href) {
-            Timber.e("Ambiguous playback location provided. HREF `$href` doesn't match locator $locator.")
-        }
-
-        return locator
-    }
-
-    override suspend fun coverOfPublication(publication: Publication, publicationId: PublicationId): Bitmap? =
-        publication.cover()
 
     private var notificationId: Int? = null
     private var notification: Notification? = null
 
-    override fun onNotificationPosted(notificationId: Int, notification: Notification) {
-        this.notificationId = notificationId
-        this.notification = notification
-        startForeground(notificationId, notification)
-    }
+    private val mediaPlayerListener = object : MediaPlayer.Listener {
 
-    override fun onNotificationCancelled(notificationId: Int) {
-        this.notificationId = null
-        this.notification = null
-        stopForeground(true)
-    }
+        override fun locatorFromMediaId(mediaId: String, extras: Bundle?): Locator? {
+            val navigator = navigator.value ?: return null
+            val (publicationId, href) = mediaId.splitAt("#")
 
-    // We don't support any custom commands by default.
-    override fun onCommand(command: String, args: Bundle?, cb: ResultReceiver?): Boolean = false
+            if (navigator.publicationId != publicationId) {
+                return null
+            }
+
+            val locator = (extras?.getParcelable(EXTRA_LOCATOR) as? Locator)
+                ?: href?.let { navigator.publication.linkWithHref(it)?.toLocator() }
+
+            if (locator != null && href != null && locator.href != href) {
+                Timber.e("Ambiguous playback location provided. HREF `$href` doesn't match locator $locator.")
+            }
+
+            return locator
+        }
+
+        override suspend fun coverOfPublication(publication: Publication, publicationId: PublicationId): Bitmap? =
+            this@MediaService.coverOfPublication(publication, publicationId)
+
+        override fun onNotificationPosted(notificationId: Int, notification: Notification) {
+            this@MediaService.notificationId = notificationId
+            this@MediaService.notification = notification
+            startForeground(notificationId, notification)
+        }
+
+        override fun onNotificationCancelled(notificationId: Int) {
+            this@MediaService.notificationId = null
+            this@MediaService.notification = null
+            stopForeground(true)
+
+            if (navigator.value?.isPlaying == false) {
+                onPlayerStopped()
+            }
+        }
+
+        override fun onCommand(command: String, args: Bundle?, cb: ResultReceiver?): Boolean =
+            this@MediaService.onCommand(command, args, cb)
+
+        override fun onPlayerStopped() {
+            mediaSession.publicationId = null
+            player = null
+            navigator.value = null
+        }
+
+    }
 
     // Service
 
@@ -167,14 +186,11 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
 
         cancel()
 
-        mediaSession.run {
-            isActive = false
-            release()
-        }
+        releaseMediaSession()
 
-        player?.onDestroy()
         navigator.value?.stop()
         navigator.value = null
+        player = null
     }
 
     // MediaBrowserServiceCompat
@@ -203,14 +219,22 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
         @Volatile private var mediaSession: MediaSessionCompat? = null
 
         fun connect(context: Context, serviceClass: Class<*> = MediaService::class.java): Connection =
-            createOnceIn(this::connection, this) {
+            createIfNull(this::connection, this) {
                 Connection(context, serviceClass)
             }
 
         private fun getMediaSession(context: Context, serviceClass: Class<*>): MediaSessionCompat =
-            createOnceIn(this::mediaSession, this) {
+            createIfNull(this::mediaSession, this) {
                 MediaSessionCompat(context, /* log tag */ serviceClass.simpleName)
             }
+
+        private fun releaseMediaSession() {
+            mediaSession?.apply {
+                isActive = false
+                release()
+            }
+            mediaSession = null
+        }
 
     }
 
@@ -239,7 +263,7 @@ open class MediaService : MediaBrowserServiceCompat(), MediaPlayer.Listener, Cor
 }
 
 // FIXME: Move to r2-shared
-internal fun <T> createOnceIn(property: KMutableProperty0<T?>, owner: Any, factory: () -> T): T =
+internal fun <T> createIfNull(property: KMutableProperty0<T?>, owner: Any, factory: () -> T): T =
     property.get() ?: synchronized(owner) {
         property.get() ?: factory().also {
             property.set(it)

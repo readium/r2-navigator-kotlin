@@ -57,6 +57,7 @@ internal class ExoMediaPlayer(
             .build()
 
         setHandleAudioBecomingNoisy(true)
+        addListener(EventListener())
 //        addAnalyticsListener(EventLogger(null))
     }
 
@@ -130,6 +131,16 @@ internal class ExoMediaPlayer(
         val duration = readingOrder[index].duration?.seconds
         val time = locator.locations.timeWithDuration(duration)
         player.seekTo(index, time?.toLongMilliseconds() ?: 0)
+    }
+
+    private inner class EventListener : Player.EventListener {
+
+        override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+            if (playbackState == Player.STATE_IDLE) {
+                listener?.onPlayerStopped()
+            }
+        }
+
     }
 
     private inner class PlaybackPreparer : MediaSessionConnector.PlaybackPreparer {
