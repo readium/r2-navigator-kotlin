@@ -20,24 +20,25 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.audio.AudioAttributes
+import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
+import com.google.android.exoplayer2.upstream.DataSource
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
+import com.google.android.exoplayer2.upstream.cache.*
 import com.google.android.exoplayer2.util.Util
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.readium.r2.navigator.R
 import org.readium.r2.navigator.audio.CompositeDataSource
 import org.readium.r2.navigator.audio.PublicationDataSource
 import org.readium.r2.navigator.extensions.timeWithDuration
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.publication.*
+import java.io.File
 import java.util.*
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
@@ -47,7 +48,8 @@ import kotlin.time.seconds
 internal class ExoMediaPlayer(
     private val context: Context,
     mediaSession: MediaSessionCompat,
-    media: PendingMedia
+    media: PendingMedia,
+    val useCache: Boolean = false
 ) : MediaPlayer, CoroutineScope by MainScope() {
 
     override var listener: MediaPlayer.Listener? = null
@@ -118,11 +120,15 @@ internal class ExoMediaPlayer(
     }
 
     private fun prepareTracklist() {
-        val dataSourceFactory = CompositeDataSource.Factory()
+        var dataSourceFactory: DataSource.Factory = CompositeDataSource.Factory()
             .bind(DefaultHttpDataSourceFactory(Util.getUserAgent(context, "Readium"))) {
                 it.scheme?.toLowerCase(Locale.ROOT) in listOf("http", "https")
             }
             .bind(PublicationDataSource.Factory(publication))
+
+        if (useCache) {
+            dataSourceFactory = CacheDataSourceFactory(getCache(context), dataSourceFactory)
+        }
 
         val mediaSourceFactory = ProgressiveMediaSource.Factory(dataSourceFactory)
 
@@ -232,6 +238,21 @@ internal class ExoMediaPlayer(
         putString(MediaMetadataCompat.METADATA_KEY_AUTHOR, publication.metadata.authors.joinToString(", ") { it.name }.takeIf { it.isNotBlank() })
         putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, publication.metadata.title)
     }.build()
+
+    companion object {
+
+        private var cache: Cache? = null
+
+        private fun getCache(context: Context): Cache =
+            createIfNull(::cache, this) {
+                SimpleCache(
+                    /* cacheDir */ File(context.externalCacheDir, "exoplayer"),
+                    NoOpCacheEvictor(),
+                    ExoDatabaseProvider(context)
+                )
+            }
+
+    }
 
 }
 
