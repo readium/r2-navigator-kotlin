@@ -25,22 +25,27 @@ import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
+import com.google.android.exoplayer2.util.Util
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.R
+import org.readium.r2.navigator.audio.CompositeDataSource
 import org.readium.r2.navigator.audio.PublicationDataSource
 import org.readium.r2.navigator.extensions.timeWithDuration
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.publication.*
+import java.util.*
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
 @AudioSupport
 @OptIn(ExperimentalTime::class)
 internal class ExoMediaPlayer(
-    context: Context,
+    private val context: Context,
     mediaSession: MediaSessionCompat,
     media: PendingMedia
 ) : MediaPlayer, CoroutineScope by MainScope() {
@@ -113,7 +118,12 @@ internal class ExoMediaPlayer(
     }
 
     private fun prepareTracklist() {
-        val dataSourceFactory = PublicationDataSource.Factory(publication)
+        val dataSourceFactory = CompositeDataSource.Factory()
+            .bind(DefaultHttpDataSourceFactory(Util.getUserAgent(context, "Readium"))) {
+                it.scheme?.toLowerCase(Locale.ROOT) in listOf("http", "https")
+            }
+            .bind(PublicationDataSource.Factory(publication))
+
         val mediaSourceFactory = ProgressiveMediaSource.Factory(dataSourceFactory)
 
         val trackSources = publication.readingOrder.map { link ->
