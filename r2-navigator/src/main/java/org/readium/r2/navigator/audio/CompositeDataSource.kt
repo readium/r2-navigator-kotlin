@@ -30,15 +30,15 @@ internal class CompositeDataSource private constructor(private val dataSources: 
     /** Currently opened data source. */
     private var openedDataSource: DataSource? = null
 
-    override fun addTransferListener(transferListener: TransferListener?) {
+    override fun addTransferListener(transferListener: TransferListener) {
         for ((_, dataSource) in dataSources) {
             dataSource.addTransferListener(transferListener)
         }
     }
 
-    override fun open(dataSpec: DataSpec?): Long {
+    override fun open(dataSpec: DataSpec): Long {
         dataSpec ?: throw IllegalArgumentException("[dataSpec] is required")
-        require(openedDataSource == null) { "Opening a new DataSpec before closing the previous one: ${dataSpec.uri}." }
+        close()
 
         for ((accept, dataSource) in dataSources) {
             if (accept(dataSpec.uri)) {
@@ -50,8 +50,8 @@ internal class CompositeDataSource private constructor(private val dataSources: 
         throw IllegalArgumentException("Can't find a matching [DataSource] for ${dataSpec.uri}.")
     }
 
-    override fun read(buffer: ByteArray?, offset: Int, readLength: Int): Int =
-        requireNotNull(openedDataSource).read(buffer, offset, readLength)
+    override fun read(target: ByteArray, offset: Int, length: Int): Int =
+        requireNotNull(openedDataSource).read(target, offset, length)
 
     override fun getUri(): Uri? =
         requireNotNull(openedDataSource).uri

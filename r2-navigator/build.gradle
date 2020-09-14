@@ -95,7 +95,8 @@ dependencies {
     implementation 'com.github.chrisbanes:PhotoView:2.1.4'
 
     // ExoPlayer is used by the Audio Navigator.
-    implementation "com.google.android.exoplayer:exoplayer-core:2.11.7"
-    implementation "com.google.android.exoplayer:exoplayer-ui:2.11.7"
-    implementation "com.google.android.exoplayer:extension-mediasession:2.11.7"
+    api "com.google.android.exoplayer:exoplayer-core:2.12.0"
+    api "com.google.android.exoplayer:exoplayer-ui:2.12.0"
+    api "com.google.android.exoplayer:extension-mediasession:2.12.0"
+    api "com.google.android.exoplayer:extension-workmanager:2.12.0"
 }

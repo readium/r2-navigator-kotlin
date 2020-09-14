@@ -49,7 +49,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
     open fun onCreatePlayer(mediaSession: MediaSessionCompat, media: PendingMedia): MediaPlayer =
         ExoMediaPlayer(this, mediaSession, media)
 
-    open fun onCurrentLocatorChanged(publicationId: PublicationId, locator: Locator) {}
+    open fun onCurrentLocatorChanged(publication: Publication, publicationId: PublicationId, locator: Locator) {}
 
     open suspend fun coverOfPublication(publication: Publication, publicationId: PublicationId): Bitmap? =
         publication.cover()
@@ -157,12 +157,12 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
         launch {
             navigator
                 .flatMapLatest { navigator ->
-                    navigator ?: return@flatMapLatest emptyFlow<Pair<PublicationId, Locator?>>()
-                    navigator.currentLocator.asFlow().map { Pair(navigator.publicationId, it) }
+                    navigator ?: return@flatMapLatest emptyFlow<Pair<MediaSessionNavigator, Locator?>>()
+                    navigator.currentLocator.asFlow().map { Pair(navigator, it) }
                 }
-                .collect { (publicationId, locator) ->
+                .collect { (navigator, locator) ->
                     if (locator != null) {
-                        onCurrentLocatorChanged(publicationId, locator)
+                        onCurrentLocatorChanged(navigator.publication, navigator.publicationId, locator)
                     }
                 }
         }

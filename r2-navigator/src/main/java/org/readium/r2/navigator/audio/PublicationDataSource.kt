@@ -16,10 +16,8 @@ import com.google.android.exoplayer2.upstream.TransferListener
 import kotlinx.coroutines.runBlocking
 import org.readium.r2.shared.fetcher.ResourceInputStream
 import org.readium.r2.shared.publication.Publication
-import java.io.EOFException
 import java.io.IOException
 import java.io.InputStream
-
 
 /**
  * An ExoPlayer's [DataSource] which retrieves resources from a [Publication].
@@ -51,8 +49,7 @@ internal class PublicationDataSource(private val publication: Publication) : Bas
 
     private var openedResource: OpenedResource? = null
 
-    override fun open(dataSpec: DataSpec?): Long {
-        dataSpec ?: throw IllegalArgumentException("[dataSpec] is required")
+    override fun open(dataSpec: DataSpec): Long {
         close()
 
         val link = publication.linkWithHref(dataSpec.uri.toString())
@@ -72,21 +69,19 @@ internal class PublicationDataSource(private val publication: Publication) : Bas
         return bytesRemaining
     }
 
-    override fun read(buffer: ByteArray?, offset: Int, readLength: Int): Int {
-        @Suppress("NAME_SHADOWING")
-        val buffer = buffer ?: throw IllegalArgumentException("[buffer] is required.")
+    override fun read(target: ByteArray, offset: Int, length: Int): Int {
         val openedResource = openedResource ?: throw Exception.NotOpened("No opened resource to read from. Did you call open()?")
 
         when {
-            (readLength <= 0) -> return 0
+            (length <= 0) -> return 0
             (openedResource.bytesRemaining == 0.toLong()) -> return RESULT_END_OF_INPUT
         }
 
         val bytesRead = try {
-            val bytesToRead = readLength.coerceAtMost(openedResource.bytesRemaining.toInt())
-            openedResource.inputStream.read(buffer, offset, bytesToRead)
+            val bytesToRead = length.coerceAtMost(openedResource.bytesRemaining.toInt())
+            openedResource.inputStream.read(target, offset, bytesToRead)
         } catch (e: Exception) {
-            throw Exception.ReadFailed(uri = openedResource.uri, offset = offset, readLength = readLength, cause = e)
+            throw Exception.ReadFailed(uri = openedResource.uri, offset = offset, readLength = length, cause = e)
         }
 
         if (bytesRead == -1) {
