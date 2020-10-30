@@ -14,10 +14,11 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaControllerCompat.TransportControls
 import android.support.v4.media.session.PlaybackStateCompat
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import org.readium.r2.navigator.MediaNavigator
 import org.readium.r2.navigator.extensions.sum
 import org.readium.r2.navigator.media.extensions.*
@@ -46,7 +47,7 @@ class MediaSessionNavigator(
     override val publication: Publication,
     val publicationId: PublicationId,
     val controller: MediaControllerCompat
-) : MediaNavigator {
+) : MediaNavigator, CoroutineScope by MainScope() {
 
     /**
      * Indicates whether the media session is loaded with a resource from this [publication]. This
@@ -84,6 +85,12 @@ class MediaSessionNavigator(
 
     init {
         controller.registerCallback(MediaControllerCallback())
+
+        launch {
+            combine(playbackPosition, mediaMetadata, ::createLocator).collect {
+                _currentLocator.value = it
+            }
+        }
     }
 
     private val transportControls: TransportControls get() = controller.transportControls
@@ -139,8 +146,8 @@ class MediaSessionNavigator(
 
     // Navigator
 
-    override val currentLocator: LiveData<Locator?> =
-        combine(playbackPosition, mediaMetadata, ::createLocator).asLiveData()
+    private val _currentLocator = MutableStateFlow<Locator?>(null)
+    override val currentLocator: StateFlow<Locator?> get() = _currentLocator.asStateFlow()
 
     /**
      * Creates a [Locator] from the given media [metadata] and playback [position].

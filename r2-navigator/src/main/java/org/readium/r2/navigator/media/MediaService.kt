@@ -158,7 +158,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
             navigator
                 .flatMapLatest { navigator ->
                     navigator ?: return@flatMapLatest emptyFlow<Pair<MediaSessionNavigator, Locator?>>()
-                    navigator.currentLocator.asFlow().map { Pair(navigator, it) }
+                    navigator.currentLocator.map { Pair(navigator, it) }
                 }
                 .collect { (navigator, locator) ->
                     if (locator != null) {
