@@ -55,7 +55,7 @@ open class AudioActivity : AppCompatActivity() {
         publicationId = mediaNavigator.publicationId
         mediaNavigator.play()
 
-        supportFragmentManager.fragmentFactory = AudioNavigatorFragment.Factory(mediaNavigator)
+        supportFragmentManager.fragmentFactory = AudioNavigatorFragment.createFactory(mediaNavigator)
 
         super.onCreate(savedInstanceState)
 

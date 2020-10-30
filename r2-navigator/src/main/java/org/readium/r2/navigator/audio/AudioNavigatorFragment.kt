@@ -22,6 +22,7 @@ import org.readium.r2.navigator.R
 import org.readium.r2.navigator.extensions.formatElapsedTime
 import org.readium.r2.navigator.extensions.let
 import org.readium.r2.navigator.extensions.viewById
+import org.readium.r2.navigator.util.createFragmentFactory
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.FragmentNavigator
 import org.readium.r2.shared.publication.services.cover
@@ -34,24 +35,6 @@ class AudioNavigatorFragment(
     private val mediaNavigator: MediaNavigator,
     @LayoutRes private val layoutId: Int = R.layout.r2_audio_fragment
 ) : Fragment(layoutId), MediaNavigator by mediaNavigator {
-
-    /**
-     * Factory for an [AudioNavigatorFragment].
-     *
-     * @param mediaNavigator The underlying chromeless navigator handling media playback.
-     */
-    class Factory(
-        private val mediaNavigator: MediaNavigator,
-        @LayoutRes private val layoutId: Int = R.layout.r2_audio_fragment
-    ) : FragmentFactory() {
-
-        override fun instantiate(classLoader: ClassLoader, className: String): Fragment =
-            when (className) {
-                AudioNavigatorFragment::class.java.name -> AudioNavigatorFragment(mediaNavigator, layoutId)
-                else -> super.instantiate(classLoader, className)
-            }
-
-    }
 
     private val coverView: ImageView? by viewById(R.id.r2_coverView)
     private val timelineBar: SeekBar? by viewById(R.id.r2_timelineBar)
@@ -123,6 +106,19 @@ class AudioNavigatorFragment(
     override fun onResume() {
         super.onResume()
         activity?.volumeControlStream = AudioManager.STREAM_MUSIC
+    }
+
+    companion object {
+
+        /**
+         * Creates a factory for a [AudioNavigatorFragment].
+         *
+         * @param mediaNavigator The underlying chromeless navigator handling media playback.
+         * @param layoutId ID of the layout to use for the interface.
+         */
+        fun createFactory(mediaNavigator: MediaNavigator, @LayoutRes layoutId: Int = R.layout.r2_audio_fragment): FragmentFactory =
+            createFragmentFactory { AudioNavigatorFragment(mediaNavigator, layoutId) }
+
     }
 
 }
