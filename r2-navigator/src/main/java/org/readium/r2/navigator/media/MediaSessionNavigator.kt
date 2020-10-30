@@ -87,9 +87,9 @@ class MediaSessionNavigator(
         controller.registerCallback(MediaControllerCallback())
 
         launch {
-            combine(playbackPosition, mediaMetadata, ::createLocator).collect {
-                _currentLocator.value = it
-            }
+            combine(playbackPosition, mediaMetadata, ::createLocator)
+                .filterNotNull()
+                .collect { _currentLocator.value = it }
         }
     }
 
@@ -146,8 +146,8 @@ class MediaSessionNavigator(
 
     // Navigator
 
-    private val _currentLocator = MutableStateFlow<Locator?>(null)
-    override val currentLocator: StateFlow<Locator?> get() = _currentLocator.asStateFlow()
+    private val _currentLocator = MutableStateFlow(Locator(href = "#", type = ""))
+    override val currentLocator: StateFlow<Locator> get() = _currentLocator.asStateFlow()
 
     /**
      * Creates a [Locator] from the given media [metadata] and playback [position].
@@ -208,8 +208,13 @@ class MediaSessionNavigator(
         combine(
             mediaMetadata.filterNotNull(),
             playbackState.filterNotNull(),
-            playbackPosition
+            playbackPosition.map { it.toLongMilliseconds() }
         ) { metadata, state, position ->
+            // FIXME: Since upgrading to the latest flow version, there's a weird crash when combining a `Flow<Duration>`, like `playbackPosition`. Mapping it seems to do the trick.
+            // See https://github.com/Kotlin/kotlinx.coroutines/issues/2353
+            @Suppress("NAME_SHADOWING")
+            val position = position.milliseconds
+
             val index = metadata.resourceHref?.let { publication.readingOrder.indexOfFirstWithHref(it) }
             if (index == null) {
                 Timber.e("Can't find resource index in publication for media ID `${metadata.id}`.")
