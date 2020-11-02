@@ -27,6 +27,7 @@ import com.google.android.exoplayer2.source.DefaultMediaSourceFactory
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import com.google.android.exoplayer2.upstream.DataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
+import com.google.android.exoplayer2.upstream.HttpDataSource
 import com.google.android.exoplayer2.upstream.cache.Cache
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource
 import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor
@@ -41,8 +42,11 @@ import org.readium.r2.navigator.audio.CompositeDataSource
 import org.readium.r2.navigator.audio.PublicationDataSource
 import org.readium.r2.navigator.extensions.timeWithDuration
 import org.readium.r2.shared.AudioSupport
+import org.readium.r2.shared.fetcher.Resource
 import org.readium.r2.shared.publication.*
+import timber.log.Timber
 import java.io.File
+import java.net.UnknownHostException
 import java.util.*
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
@@ -168,6 +172,23 @@ class ExoMediaPlayer(
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
             if (playbackState == Player.STATE_IDLE) {
                 listener?.onPlayerStopped()
+            }
+        }
+
+        override fun onPlayerError(error: ExoPlaybackException) {
+            Timber.e(error)
+
+            val resourceException: Resource.Exception? = when {
+                (error.cause as? HttpDataSource.HttpDataSourceException)?.cause is UnknownHostException -> Resource.Exception.Offline
+                else -> null
+            }
+
+            if (resourceException != null) {
+                player.currentMediaItem?.mediaId
+                    ?.let { href -> publication.linkWithHref(href) }
+                    ?.let { link ->
+                        listener?.onResourceLoadFailed(link, resourceException)
+                    }
             }
         }
 

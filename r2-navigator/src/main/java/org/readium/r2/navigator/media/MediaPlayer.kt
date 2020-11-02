@@ -10,6 +10,8 @@ import android.app.Notification
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.ResultReceiver
+import org.readium.r2.shared.fetcher.Resource
+import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.PublicationId
@@ -27,6 +29,12 @@ interface MediaPlayer {
         fun onCommand(command: String, args: Bundle?, cb: ResultReceiver?): Boolean
 
         fun onPlayerStopped()
+
+        /**
+         * Called when a resource failed to be loaded, for example because the Internet connection
+         * is offline and the resource is streamed.
+         */
+        fun onResourceLoadFailed(link: Link, error: Resource.Exception)
 
     }
 

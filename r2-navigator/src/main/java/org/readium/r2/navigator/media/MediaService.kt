@@ -16,7 +16,6 @@ import android.os.Process
 import android.os.ResultReceiver
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaSessionCompat
-import androidx.lifecycle.asFlow
 import androidx.media.MediaBrowserServiceCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -25,11 +24,9 @@ import org.readium.r2.navigator.extensions.let
 import org.readium.r2.navigator.media.extensions.publicationId
 import org.readium.r2.shared.AudioSupport
 import org.readium.r2.shared.extensions.splitAt
-import org.readium.r2.shared.publication.Locator
-import org.readium.r2.shared.publication.Publication
-import org.readium.r2.shared.publication.PublicationId
+import org.readium.r2.shared.fetcher.Resource
+import org.readium.r2.shared.publication.*
 import org.readium.r2.shared.publication.services.cover
-import org.readium.r2.shared.publication.toLocator
 import timber.log.Timber
 import kotlin.reflect.KMutableProperty0
 
@@ -58,6 +55,14 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
     open fun onCommand(command: String, args: Bundle?, cb: ResultReceiver?): Boolean = false
 
     open fun onPlayerStopped() {}
+
+    /**
+     * Called when a resource failed to be loaded, for example because the Internet connection
+     * is offline and the resource is streamed.
+     *
+     * You should present the exception to the user.
+     */
+    open fun onResourceLoadFailed(link: Link, error: Resource.Exception) {}
 
     protected val mediaSession: MediaSessionCompat get() = getMediaSession(this, javaClass)
 
@@ -126,6 +131,10 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
             player = null
             navigator.value = null
             this@MediaService.onPlayerStopped()
+        }
+
+        override fun onResourceLoadFailed(link: Link, error: Resource.Exception) {
+            this@MediaService.onResourceLoadFailed(link, error)
         }
 
     }
