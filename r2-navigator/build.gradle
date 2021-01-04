@@ -66,8 +66,8 @@ dependencies {
     // ChrisBane/PhotoView ( for the Zoom handling )
     implementation "com.github.chrisbanes:PhotoView:2.3.0"
     // ExoPlayer is used by the Audio Navigator.
-    api "com.google.android.exoplayer:exoplayer-core:2.12.0"
-    api "com.google.android.exoplayer:exoplayer-ui:2.12.0"
+    api "com.google.android.exoplayer:exoplayer-core:2.12.2"
+    api "com.google.android.exoplayer:exoplayer-ui:2.12.2"
     api "com.google.android.exoplayer:extension-mediasession:2.12.0"
     api "com.google.android.exoplayer:extension-workmanager:2.12.0"
     implementation "com.google.android.material:material:1.3.0-alpha03"
