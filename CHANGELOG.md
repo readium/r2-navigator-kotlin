@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+* [#150](https://github.com/readium/r2-navigator-kotlin/issues/150) External links are opened in a Chrome Custom Tab instead of the navigator's web view.
+
+
 ## [2.0.0-beta.1]
 
 ### Added

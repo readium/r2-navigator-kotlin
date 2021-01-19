@@ -12,24 +12,26 @@ package org.readium.r2.navigator
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.PointF
+import android.net.Uri
 import android.os.Build
 import android.text.Html
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.widget.ImageButton
 import android.widget.ListPopupWindow
 import android.widget.PopupWindow
 import android.widget.TextView
+import androidx.browser.customtabs.CustomTabsIntent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.jsoup.Jsoup
 import org.jsoup.safety.Whitelist
+import org.readium.r2.shared.extensions.tryOrNull
 import org.readium.r2.shared.publication.ReadingProgression
 import org.readium.r2.shared.util.Href
 import timber.log.Timber
@@ -45,7 +47,6 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
     lateinit var navigator: Navigator
     internal var preferences: SharedPreferences? = null
 
-    var overrideUrlLoading = true
     var resourceUrl: String? = null
 
     internal val scrollModeFlow = MutableStateFlow(false)
@@ -230,8 +231,6 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
 
                     // Finally, show the popup window at the center location of root relative layout
                     mPopupWindow.showAtLocation(this, Gravity.CENTER, 0, 0)
-
-                    overrideUrlLoading = false
                 }
             }
         }
@@ -337,6 +336,33 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
         this.evaluateJavascript(javascript) { result ->
             if (callback != null) callback(result)
         }
+    }
+
+    /**
+     * Prevents opening external links in the web view.
+     * To be called from the WebViewClient implementation attached to the web view.
+     */
+    internal fun shouldOverrideUrlLoading(request: WebResourceRequest): Boolean {
+        val resourceUrl = url ?: return false
+
+        // List of hosts that are allowed to be loaded in the web view.
+        // The host of the page already loaded in the web view is always allowed.
+        val passthroughHosts = listOfNotNull(
+            "localhost", "127.0.0.1",
+            tryOrNull { Uri.parse(resourceUrl) }?.host
+        )
+        if (!passthroughHosts.contains(request.url.host)) {
+            openExternalLink(request.url)
+            return true
+        }
+
+        return false
+    }
+
+    private fun openExternalLink(url: Uri) {
+        CustomTabsIntent.Builder()
+            .build()
+            .launchUrl(context, url)
     }
 
     interface Listener {
