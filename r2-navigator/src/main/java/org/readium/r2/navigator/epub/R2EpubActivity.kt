@@ -48,7 +48,6 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
         get() = Dispatchers.Main
 
     override lateinit var preferences: SharedPreferences
-    override lateinit var resourcePager: R2ViewPager
     override lateinit var publicationPath: String
     override lateinit var publicationFileName: String
     override lateinit var publication: Publication
@@ -61,6 +60,9 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
 
     val adapter: R2PagerAdapter get() =
         resourcePager.adapter as R2PagerAdapter
+
+    override val resourcePager: R2ViewPager get() =
+        navigatorFragment.resourcePager
 
     private val currentFragment: R2EpubPageFragment? get() =
         adapter.mFragments.get(adapter.getItemId(resourcePager.currentItem)) as? R2EpubPageFragment
@@ -93,8 +95,6 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_r2_epub)
-
-        resourcePager = navigatorFragment.resourcePager
 
         title = null
 
