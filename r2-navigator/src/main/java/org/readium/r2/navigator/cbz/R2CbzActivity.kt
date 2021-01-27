@@ -13,6 +13,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
@@ -27,6 +28,7 @@ import org.readium.r2.navigator.*
 import org.readium.r2.navigator.image.ImageNavigatorFragment
 import org.readium.r2.navigator.pager.R2PagerAdapter
 import org.readium.r2.navigator.pager.R2ViewPager
+import org.readium.r2.navigator.util.CompositeFragmentFactory
 import org.readium.r2.shared.extensions.getPublication
 import org.readium.r2.shared.publication.*
 import kotlin.coroutines.CoroutineContext
@@ -95,7 +97,13 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
 
         val initialLocator = intent.getParcelableExtra("locator") as? Locator
 
-        supportFragmentManager.fragmentFactory = ImageNavigatorFragment.Factory(publication, initialLocator = initialLocator, listener = this)
+        // This must be done before the call to super.onCreate, including by reading apps.
+        // Because they may want to set their own factories, let's use a CompositeFragmentFactory that retain
+        // previously set factories.
+        supportFragmentManager.fragmentFactory = CompositeFragmentFactory(
+            supportFragmentManager.fragmentFactory,
+            ImageNavigatorFragment.Factory(publication, initialLocator = initialLocator, listener = this)
+        )
 
         super.onCreate(savedInstanceState)
 
@@ -110,7 +118,7 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
         })
 
         // Add support for display cutout.
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
     }

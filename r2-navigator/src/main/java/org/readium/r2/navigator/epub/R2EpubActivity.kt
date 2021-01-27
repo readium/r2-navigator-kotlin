@@ -32,6 +32,7 @@ import org.readium.r2.navigator.*
 import org.readium.r2.navigator.pager.R2EpubPageFragment
 import org.readium.r2.navigator.pager.R2PagerAdapter
 import org.readium.r2.navigator.pager.R2ViewPager
+import org.readium.r2.navigator.util.CompositeFragmentFactory
 import org.readium.r2.shared.extensions.getPublication
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
@@ -90,7 +91,13 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
 
         val initialLocator = intent.getParcelableExtra("locator") as? Locator
 
-        supportFragmentManager.fragmentFactory = EpubNavigatorFragment.createFactory(publication, baseUrl = baseUrl, initialLocator = initialLocator, listener = this)
+        // This must be done before the call to super.onCreate, including by reading apps.
+        // Because they may want to set their own factories, let's use a CompositeFragmentFactory that retain
+        // previously set factories.
+        supportFragmentManager.fragmentFactory = CompositeFragmentFactory(
+            supportFragmentManager.fragmentFactory,
+            EpubNavigatorFragment.createFactory(publication, baseUrl = baseUrl, initialLocator = initialLocator, listener = this)
+        )
 
         super.onCreate(savedInstanceState)
 
