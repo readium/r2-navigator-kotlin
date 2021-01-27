@@ -121,6 +121,16 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
         super.onActionModeStarted(mode)
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == 2 && resultCode == Activity.RESULT_OK) {
+            val locator = data?.getParcelableExtra("locator") as? Locator
+            if (locator != null) {
+                go(locator)
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun toggleActionBar() {
         if (allowToggleActionBar) {
             launch {
