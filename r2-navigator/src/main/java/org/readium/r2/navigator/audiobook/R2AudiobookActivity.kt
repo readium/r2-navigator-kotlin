@@ -38,7 +38,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
     private fun notifyCurrentLocation() {
         val locator = publication.readingOrder[currentResource].let { resource ->
             val progression = mediaPlayer
-                ?.takeIf { it.duration > 0 }
+                .takeIf { it.duration > 0 }
                 ?.let { it.currentPosition / it.duration }
                 ?: 0.0
 
@@ -49,7 +49,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
                 title = resource.title,
                 locations = Locator.Locations(
                     fragments = listOf(
-                        "t=${TimeUnit.MILLISECONDS.toSeconds(mediaPlayer?.currentPosition?.toLong() ?: 0)}"
+                        "t=${TimeUnit.MILLISECONDS.toSeconds(mediaPlayer.currentPosition.toLong() ?: 0)}"
                     ),
                     progression = progression
                 )
@@ -66,15 +66,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
 
     override fun go(locator: Locator, animated: Boolean, completion: () -> Unit): Boolean {
         loadedInitialLocator = true
-        val resourceIndex = publication.readingOrder.indexOfFirstWithHref(locator.href) ?: return false
-
-        val mediaPlayer = mediaPlayer ?: run {
-            pendingLocator = locator
-            return false
-        }
-
-        pendingLocator = null
-        currentResource = resourceIndex
+        val currentResource = publication.readingOrder.indexOfFirstWithHref(locator.href) ?: return false
         mediaPlayer.goTo(currentResource)
         seek(locator.locations)
 
@@ -90,7 +82,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
             currentResource++
         }
 
-        mediaPlayer?.next()
+        mediaPlayer.next()
         play_pause!!.callOnClick()
         return true
     }
@@ -100,7 +92,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
             currentResource--
         }
 
-        mediaPlayer?.previous()
+        mediaPlayer.previous()
         play_pause!!.callOnClick()
         return true
     }
@@ -129,8 +121,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
     private val forwardTime = 10000
     private val backwardTime = 10000
 
-    var mediaPlayer: R2MediaPlayer? = null
-    private var pendingLocator: Locator? = null
+    lateinit var mediaPlayer: R2MediaPlayer
     private var loadedInitialLocator = false
 
     protected var navigatorDelegate: NavigatorDelegate? = null
@@ -176,7 +167,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
                     if (!fromUser) {
                         return
                     }
-                    mediaPlayer?.seekTo(progress)
+                    mediaPlayer.seekTo(progress)
                     if (DEBUG) Timber.tag("AUDIO").d("progress $progress")
                 }
 
@@ -205,7 +196,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
             })
 
             play_pause!!.setOnClickListener {
-                mediaPlayer?.let {
+                mediaPlayer.let {
                     if (it.isPlaying) {
                         it.pause()
                     } else {
@@ -225,14 +216,14 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
             fast_forward!!.setOnClickListener {
                 if (startTime.toInt() + forwardTime <= finalTime) {
                     startTime += forwardTime
-                    mediaPlayer?.seekTo(startTime)
+                    mediaPlayer.seekTo(startTime)
                 }
             }
 
             fast_back!!.setOnClickListener {
                 if (startTime.toInt() - backwardTime > 0) {
                     startTime -= backwardTime
-                    mediaPlayer?.seekTo(startTime)
+                    mediaPlayer.seekTo(startTime)
                 }
             }
 
@@ -271,14 +262,14 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
         chapterView!!.text = current.title
 
 
-        if (mediaPlayer!!.isPlaying) {
+        if (mediaPlayer.isPlaying) {
             play_pause!!.setImageDrawable(ContextCompat.getDrawable(this@R2AudiobookActivity, R.drawable.ic_pause_white_24dp))
         } else {
             play_pause!!.setImageDrawable(ContextCompat.getDrawable(this@R2AudiobookActivity, R.drawable.ic_play_arrow_white_24dp))
         }
 
-        finalTime = mediaPlayer!!.duration
-        startTime = mediaPlayer!!.currentPosition
+        finalTime = mediaPlayer.duration
+        startTime = mediaPlayer.currentPosition
 
         seekBar!!.max = finalTime.toInt()
 
@@ -296,7 +287,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
     }
 
     private fun seek(locations: Locator.Locations) {
-        if (mediaPlayer?.isPrepared == false) {
+        if (!mediaPlayer.isPrepared) {
             pendingSeekLocation = locations
             return
         }
@@ -311,12 +302,12 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
             time
         }
         time?.let {
-            mediaPlayer?.seekTo(TimeUnit.SECONDS.toMillis(it.toLong()).toInt())
+            mediaPlayer.seekTo(TimeUnit.SECONDS.toMillis(it.toLong()).toInt())
         } ?: run {
             val progression = locations.progression
-            val duration = mediaPlayer?.duration
-            if (progression != null && duration != null) {
-                mediaPlayer?.seekTo(progression * duration)
+            val duration = mediaPlayer.duration
+            if (progression != null) {
+                mediaPlayer.seekTo(progression * duration)
             }
         }
     }
@@ -342,22 +333,22 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
                 if (currentResource < publication.readingOrder.size - 1) {
                     currentResource++
                 }
-                mediaPlayer?.next()
+                mediaPlayer.next()
                 play_pause!!.callOnClick()
             }, 100)
         } else if (currentPosition > 0 && currentResource == publication.readingOrder.size - 1) {
-            mediaPlayer?.pause()
+            mediaPlayer.pause()
             play_pause!!.setImageDrawable(ContextCompat.getDrawable(this@R2AudiobookActivity, R.drawable.ic_play_arrow_white_24dp))
         } else {
-            mediaPlayer?.pause()
+            mediaPlayer.pause()
             play_pause!!.setImageDrawable(ContextCompat.getDrawable(this@R2AudiobookActivity, R.drawable.ic_play_arrow_white_24dp))
         }
     }
 
     private val updateSeekTime = object : Runnable {
         override fun run() {
-            if (mediaPlayer!!.isPrepared) {
-                mediaPlayer?.let {
+            if (mediaPlayer.isPrepared) {
+                mediaPlayer.let {
                     startTime = it.mediaPlayer.currentPosition.toDouble()
                 }
                 progressTime!!.text = String.format("%d:%d",
@@ -379,22 +370,22 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
 
     override fun onResume() {
         super.onResume()
-        mediaPlayer?.resume()
+        mediaPlayer.resume()
     }
 
     override fun onPause() {
         super.onPause()
-        mediaPlayer?.pause()
+        mediaPlayer.pause()
     }
 
     override fun onStop() {
         super.onStop()
-        mediaPlayer?.stop()
+        mediaPlayer.stop()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        mediaPlayer?.stop()
+        mediaPlayer.stop()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -422,7 +413,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
                     pendingSeekLocation = locator.locations
                 }
 
-                mediaPlayer?.goTo(currentResource)
+                mediaPlayer.goTo(currentResource)
 
                 play_pause!!.callOnClick()
 
