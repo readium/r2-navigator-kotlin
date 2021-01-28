@@ -66,9 +66,12 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
 
     override fun go(locator: Locator, animated: Boolean, completion: () -> Unit): Boolean {
         loadedInitialLocator = true
-        val currentResource = publication.readingOrder.indexOfFirstWithHref(locator.href) ?: return false
+        currentResource = publication.readingOrder.indexOfFirstWithHref(locator.href) ?: return false
         mediaPlayer.goTo(currentResource)
         seek(locator.locations)
+
+        play_pause!!.callOnClick()
+        notifyCurrentLocation()
 
         return true
     }
@@ -306,7 +309,9 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
         } ?: run {
             val progression = locations.progression
             val duration = mediaPlayer.duration
+            Timber.d("progression used")
             if (progression != null) {
+                Timber.d("ready to seek")
                 mediaPlayer.seekTo(progression * duration)
             }
         }
@@ -410,16 +415,8 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
                         }
                         index++
                     }
-                    pendingSeekLocation = locator.locations
+                    go(locator)
                 }
-
-                mediaPlayer.goTo(currentResource)
-
-                play_pause!!.callOnClick()
-
-                chapterView!!.text = publication.readingOrder[currentResource].title
-
-                notifyCurrentLocation()
             }
         }
 
