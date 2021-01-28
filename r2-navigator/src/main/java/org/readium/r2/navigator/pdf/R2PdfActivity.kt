@@ -41,7 +41,7 @@ abstract class R2PdfActivity : AppCompatActivity(), PdfNavigatorFragment.Listene
         publication = intent.getPublication(this)
 
         // This must be done before the call to super.onCreate, including by reading apps.
-        // Because they may want to set their own factories, let's use a CompositeFragmentFactory that retain
+        // Because they may want to set their own factories, let's use a CompositeFragmentFactory that retains
         // previously set factories.
         supportFragmentManager.fragmentFactory = CompositeFragmentFactory(
             supportFragmentManager.fragmentFactory,

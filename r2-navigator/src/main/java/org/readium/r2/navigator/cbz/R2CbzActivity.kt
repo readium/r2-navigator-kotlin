@@ -98,7 +98,7 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
         val initialLocator = intent.getParcelableExtra("locator") as? Locator
 
         // This must be done before the call to super.onCreate, including by reading apps.
-        // Because they may want to set their own factories, let's use a CompositeFragmentFactory that retain
+        // Because they may want to set their own factories, let's use a CompositeFragmentFactory that retains
         // previously set factories.
         supportFragmentManager.fragmentFactory = CompositeFragmentFactory(
             supportFragmentManager.fragmentFactory,

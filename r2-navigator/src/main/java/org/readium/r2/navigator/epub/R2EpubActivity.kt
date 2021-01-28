@@ -69,7 +69,7 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
         adapter.mFragments.get(adapter.getItemId(resourcePager.currentItem)) as? R2EpubPageFragment
 
     private val navigatorFragment: EpubNavigatorFragment get() =
-        supportFragmentManager.findFragmentById(R.id.epub_navigator) as EpubNavigatorFragment
+        supportFragmentManager.findFragmentByTag(getString(R.string.epub_navigator_tag)) as EpubNavigatorFragment
 
     // For backward compatibility, we expose these properties only through the `R2EpubActivity`.
     val positions: List<Locator> get() = navigatorFragment.positions
@@ -92,7 +92,7 @@ open class R2EpubActivity: AppCompatActivity(), IR2Activity, IR2Selectable, IR2H
         val initialLocator = intent.getParcelableExtra("locator") as? Locator
 
         // This must be done before the call to super.onCreate, including by reading apps.
-        // Because they may want to set their own factories, let's use a CompositeFragmentFactory that retain
+        // Because they may want to set their own factories, let's use a CompositeFragmentFactory that retains
         // previously set factories.
         supportFragmentManager.fragmentFactory = CompositeFragmentFactory(
             supportFragmentManager.fragmentFactory,
