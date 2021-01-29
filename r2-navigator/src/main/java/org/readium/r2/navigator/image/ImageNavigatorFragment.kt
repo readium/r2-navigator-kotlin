@@ -63,6 +63,11 @@ class ImageNavigatorFragment private constructor(
     internal var currentPagerPosition: Int = 0
     internal var resources: List<String> = emptyList()
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        childFragmentManager.fragmentFactory = createFragmentFactory { R2CbzPageFragment(publication) }
+        super.onCreate(savedInstanceState)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         currentActivity = requireActivity()
         val view = inflater.inflate(R.layout.activity_r2_viewpager, container, false)
@@ -79,7 +84,6 @@ class ImageNavigatorFragment private constructor(
             }
         })
 
-        childFragmentManager.fragmentFactory = createFragmentFactory { R2CbzPageFragment(publication) }
         adapter = R2PagerAdapter(childFragmentManager, publication.readingOrder, publication.metadata.title, Publication.TYPE.CBZ)
 
         resourcePager.adapter = adapter
