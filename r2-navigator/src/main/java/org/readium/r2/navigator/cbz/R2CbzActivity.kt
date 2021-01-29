@@ -102,7 +102,7 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
         // previously set factories.
         supportFragmentManager.fragmentFactory = CompositeFragmentFactory(
             supportFragmentManager.fragmentFactory,
-            ImageNavigatorFragment.Factory(publication, initialLocator = initialLocator, listener = this)
+            ImageNavigatorFragment.createFactory(publication, initialLocator = initialLocator, listener = this)
         )
 
         super.onCreate(savedInstanceState)
