@@ -13,6 +13,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.PointF
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -42,7 +43,6 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
     protected var navigatorDelegate: NavigatorDelegate? = null
 
     protected val positions: List<Locator> get() = navigatorFragment.positions
-    val currentPagerPosition: Int get() = navigatorFragment.currentPagerPosition
 
     override val currentLocator: StateFlow<Locator>
         get() = navigatorFragment.currentLocator
@@ -128,12 +128,14 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
         super.finish()
     }
 
+    @Deprecated("Use goForward instead", replaceWith = ReplaceWith("goForward()"), level = DeprecationLevel.ERROR)
     override fun nextResource(v: View?) {
-        navigatorFragment.nextResource(v)
+        navigatorFragment.goForward()
     }
 
+    @Deprecated("Use goBackward instead", replaceWith = ReplaceWith("goBackward()"), level = DeprecationLevel.ERROR)
     override fun previousResource(v: View?) {
-        navigatorFragment.previousResource(v)
+        navigatorFragment.goBackward()
     }
 
     override fun toggleActionBar() {
@@ -157,6 +159,19 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
 
     override fun toggleActionBar(v: View?) {
         toggleActionBar()
+    }
+
+    override fun onTap(point: PointF): Boolean {
+        val viewWidth = navigatorFragment.requireView().width
+        val leftRange = 0.0..(0.2 * viewWidth)
+
+        when {
+            leftRange.contains(point.x) -> navigatorFragment.goBackward(animated = true)
+            leftRange.contains(viewWidth - point.x) -> navigatorFragment.goForward(animated = true)
+            else -> toggleActionBar()
+        }
+
+        return true
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

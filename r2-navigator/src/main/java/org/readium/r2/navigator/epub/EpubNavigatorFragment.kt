@@ -310,7 +310,7 @@ class EpubNavigatorFragment private constructor(
     }
 
     override fun onTap(point: PointF): Boolean {
-        return (this.listener as VisualNavigator.Listener).onTap(point)
+        return this.listener?.onTap(point) ?: false
     }
 
     override fun onProgressionChanged() {

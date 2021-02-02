@@ -8,6 +8,7 @@ package org.readium.r2.navigator.image
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.PointF
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -64,7 +65,9 @@ class ImageNavigatorFragment private constructor(
     internal var resources: List<String> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        childFragmentManager.fragmentFactory = createFragmentFactory { R2CbzPageFragment(publication) }
+        childFragmentManager.fragmentFactory = createFragmentFactory {
+            R2CbzPageFragment(publication) { x, y -> this.listener?.onTap(PointF(x, y)) }
+        }
         super.onCreate(savedInstanceState)
     }
 
@@ -115,10 +118,12 @@ class ImageNavigatorFragment private constructor(
         notifyCurrentLocation()
     }
 
+    @Deprecated("Use goForward instead", replaceWith = ReplaceWith("goForward()"), level = DeprecationLevel.ERROR)
     fun nextResource(v: View?) {
         goForward()
     }
 
+    @Deprecated("Use goBackward instead", replaceWith = ReplaceWith("goBackward()"), level = DeprecationLevel.ERROR)
     fun previousResource(v: View?) {
         goBackward()
     }
