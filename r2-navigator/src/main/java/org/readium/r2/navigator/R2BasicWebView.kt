@@ -12,25 +12,29 @@ package org.readium.r2.navigator
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.PointF
+import android.net.Uri
 import android.os.Build
 import android.text.Html
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.widget.ImageButton
 import android.widget.ListPopupWindow
 import android.widget.PopupWindow
 import android.widget.TextView
+import androidx.browser.customtabs.CustomTabsIntent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.safety.Whitelist
-import org.readium.r2.shared.publication.ReadingProgression
+import org.readium.r2.shared.extensions.optNullableString
+import org.readium.r2.shared.extensions.tryOrNull
+import org.readium.r2.shared.publication.*
 import org.readium.r2.shared.util.Href
 import timber.log.Timber
 
@@ -45,7 +49,6 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
     lateinit var navigator: Navigator
     internal var preferences: SharedPreferences? = null
 
-    var overrideUrlLoading = true
     var resourceUrl: String? = null
 
     internal val scrollModeFlow = MutableStateFlow(false)
@@ -119,6 +122,18 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
         listener.onProgressionChanged()
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        addJavascriptInterface(this, "Android")
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        // Prevent the web view from leaking when detached
+        // See https://github.com/readium/r2-navigator-kotlin/issues/52
+        removeJavascriptInterface("Android")
+    }
+
     @android.webkit.JavascriptInterface
     open fun scrollRight(animated: Boolean = false) {
         uiScope.launch {
@@ -169,72 +184,139 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
         }
     }
 
+
+    /**
+     * Called from the JS code when a tap is detected.
+     * If the JS indicates the tap is being handled within the web view, don't take action,
+     *
+     * Returns whether the web view should prevent the default behavior for this tap.
+     */
     @android.webkit.JavascriptInterface
-    fun centerTapped() {
-        uiScope.launch {
-            listener.onTap(PointF((this@R2BasicWebView.width / 2).toFloat(), (this@R2BasicWebView.height / 2).toFloat()))
+    fun onTap(eventJson: String): Boolean {
+        val event = TapEvent.fromJSON(eventJson) ?: return false
+
+        // The script prevented the default behavior.
+        if (event.defaultPrevented) {
+            return false
+        }
+
+        // FIXME: Let the app handle edge taps and footnotes.
+
+        // We ignore taps on interactive element, unless it's an element we handle ourselves such as
+        // pop-up footnotes.
+        if (event.interactiveElement != null) {
+            return handleFootnote(event.targetElement)
+        }
+
+        // Skips to previous/next pages if the tap is on the content edges.
+        val clientWidth = computeHorizontalScrollExtent()
+        val thresholdRange = 0.0..(0.2 * clientWidth)
+
+        // FIXME: Call listener.onTap if scrollLeft|Right fails
+        return when {
+            thresholdRange.contains(event.clientX) -> {
+                scrollLeft(false)
+                true
+            }
+            thresholdRange.contains(clientWidth - event.clientX) -> {
+                scrollRight(false)
+                true
+            }
+            else ->
+                listener.onTap(PointF(event.clientX.toFloat(), event.clientY.toFloat()))
         }
     }
 
-    @android.webkit.JavascriptInterface
-    fun handleClick(html: String) {
-        val doc = Jsoup.parse(html)
-        val link = doc.select("a[epub:type=noteref]")?.first()
-        link?.let { noteref ->
-            val href = noteref.attr("href")
-            if (href.indexOf("#") > 0) {
-                val id = href.substring(href.indexOf('#') + 1)
-                var absolute = Href(href, baseHref = resourceUrl!!).percentEncodedString
-                absolute = absolute.substring(0, absolute.indexOf("#"))
-                val document = Jsoup.connect(absolute).get()
-                val aside = document.select("aside#$id").first()?.html()
-                aside?.let {
-                    val safe = Jsoup.clean(aside, Whitelist.relaxed())
+    /** Produced by gestures.js */
+    private data class TapEvent(
+        val defaultPrevented: Boolean,
+        val screenX: Double,
+        val screenY: Double,
+        val clientX: Double,
+        val clientY: Double,
+        val targetElement: String,
+        val interactiveElement: String?
+    ) {
+        companion object {
+            fun fromJSON(json: String): TapEvent? {
+                val obj = tryOrNull { JSONObject(json) } ?: return null
 
-                    // Initialize a new instance of LayoutInflater service
-                    val inflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-
-                    // Inflate the custom layout/view
-                    val customView = inflater.inflate(R.layout.popup_footnote, null)
-
-                    // Initialize a new instance of popup window
-                    val mPopupWindow = PopupWindow(
-                        customView,
-                        ListPopupWindow.WRAP_CONTENT,
-                        ListPopupWindow.WRAP_CONTENT
-                    )
-                    mPopupWindow.isOutsideTouchable = true
-                    mPopupWindow.isFocusable = true
-
-                    // Set an elevation value for popup window
-                    // Call requires API level 21
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        mPopupWindow.elevation = 5.0f
-                    }
-
-                    val textView = customView.findViewById(R.id.footnote) as TextView
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        textView.text = Html.fromHtml(safe, Html.FROM_HTML_MODE_COMPACT)
-                    } else {
-                        textView.text = Html.fromHtml(safe)
-                    }
-
-                    // Get a reference for the custom view close button
-                    val closeButton = customView.findViewById(R.id.ib_close) as ImageButton
-
-                    // Set a click listener for the popup window close button
-                    closeButton.setOnClickListener {
-                        // Dismiss the popup window
-                        mPopupWindow.dismiss()
-                    }
-
-                    // Finally, show the popup window at the center location of root relative layout
-                    mPopupWindow.showAtLocation(this, Gravity.CENTER, 0, 0)
-
-                    overrideUrlLoading = false
-                }
+                return TapEvent(
+                    defaultPrevented = obj.optBoolean("defaultPrevented"),
+                    screenX = obj.optDouble("screenX"),
+                    screenY = obj.optDouble("screenY"),
+                    clientX = obj.optDouble("clientX"),
+                    clientY = obj.optDouble("clientY"),
+                    targetElement = obj.optString("targetElement"),
+                    interactiveElement = obj.optNullableString("interactiveElement")
+                )
             }
         }
+    }
+
+    private fun handleFootnote(html: String): Boolean {
+        val resourceUrl = resourceUrl ?: return false
+
+        val href = tryOrNull { Jsoup.parse(html) }
+            ?.select("a[epub:type=noteref]")?.first()
+            ?.attr("href")
+            ?: return false
+
+        val id = href.substringAfter("#", missingDelimiterValue = "")
+            .takeIf { it.isNotBlank() }
+            ?: return false
+
+        val absoluteUrl = Href(href, baseHref = resourceUrl).percentEncodedString
+            .substringBefore("#")
+
+        val aside = tryOrNull { Jsoup.connect(absoluteUrl).get() }
+            ?.select("#$id")
+            ?.first()?.html()
+            ?: return false
+
+        val safe = Jsoup.clean(aside, Whitelist.relaxed())
+
+        // Initialize a new instance of LayoutInflater service
+        val inflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+
+        // Inflate the custom layout/view
+        val customView = inflater.inflate(R.layout.popup_footnote, null)
+
+        // Initialize a new instance of popup window
+        val mPopupWindow = PopupWindow(
+            customView,
+            ListPopupWindow.WRAP_CONTENT,
+            ListPopupWindow.WRAP_CONTENT
+        )
+        mPopupWindow.isOutsideTouchable = true
+        mPopupWindow.isFocusable = true
+
+        // Set an elevation value for popup window
+        // Call requires API level 21
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            mPopupWindow.elevation = 5.0f
+        }
+
+        val textView = customView.findViewById(R.id.footnote) as TextView
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            textView.text = Html.fromHtml(safe, Html.FROM_HTML_MODE_COMPACT)
+        } else {
+            textView.text = Html.fromHtml(safe)
+        }
+
+        // Get a reference for the custom view close button
+        val closeButton = customView.findViewById(R.id.ib_close) as ImageButton
+
+        // Set a click listener for the popup window close button
+        closeButton.setOnClickListener {
+            // Dismiss the popup window
+            mPopupWindow.dismiss()
+        }
+
+        // Finally, show the popup window at the center location of root relative layout
+        mPopupWindow.showAtLocation(this, Gravity.CENTER, 0, 0)
+
+        return true
     }
 
     @android.webkit.JavascriptInterface
@@ -337,6 +419,33 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
         this.evaluateJavascript(javascript) { result ->
             if (callback != null) callback(result)
         }
+    }
+
+    /**
+     * Prevents opening external links in the web view.
+     * To be called from the WebViewClient implementation attached to the web view.
+     */
+    internal fun shouldOverrideUrlLoading(request: WebResourceRequest): Boolean {
+        val resourceUrl = url ?: return false
+
+        // List of hosts that are allowed to be loaded in the web view.
+        // The host of the page already loaded in the web view is always allowed.
+        val passthroughHosts = listOfNotNull(
+            "localhost", "127.0.0.1",
+            tryOrNull { Uri.parse(resourceUrl) }?.host
+        )
+        if (!passthroughHosts.contains(request.url.host)) {
+            openExternalLink(request.url)
+            return true
+        }
+
+        return false
+    }
+
+    private fun openExternalLink(url: Uri) {
+        CustomTabsIntent.Builder()
+            .build()
+            .launchUrl(context, url)
     }
 
     interface Listener {
