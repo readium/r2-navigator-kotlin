@@ -44,6 +44,8 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
 
     protected val positions: List<Locator> get() = navigatorFragment.positions
 
+    val currentPagerPosition: Int get() = navigatorFragment.currentPagerPosition
+
     override val currentLocator: StateFlow<Locator>
         get() = navigatorFragment.currentLocator
 

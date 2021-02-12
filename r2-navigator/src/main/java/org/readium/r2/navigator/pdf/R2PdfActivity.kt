@@ -46,9 +46,9 @@ abstract class R2PdfActivity : AppCompatActivity(), PdfNavigatorFragment.Listene
         supportFragmentManager.fragmentFactory = CompositeFragmentFactory(
             supportFragmentManager.fragmentFactory,
             PdfNavigatorFragment.createFactory(
-            publication = publication,
-            initialLocator = intent.getParcelableExtra("locator"),
-            listener = this
+                publication = publication,
+                initialLocator = intent.getParcelableExtra("locator"),
+                listener = this
             )
         )
 

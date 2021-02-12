@@ -49,7 +49,7 @@ open class R2AudiobookActivity : AppCompatActivity(), CoroutineScope, IR2Activit
                 title = resource.title,
                 locations = Locator.Locations(
                     fragments = listOf(
-                        "t=${TimeUnit.MILLISECONDS.toSeconds(mediaPlayer.currentPosition.toLong() ?: 0)}"
+                        "t=${TimeUnit.MILLISECONDS.toSeconds(mediaPlayer.currentPosition.toLong())}"
                     ),
                     progression = progression
                 )
