@@ -35,6 +35,8 @@ import org.readium.r2.navigator.extensions.htmlId
 import org.readium.r2.shared.SCROLL_REF
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.ReadingProgression
+import org.readium.r2.shared.publication.services.isProtected
+import org.readium.r2.shared.publication.services.isRestricted
 import java.io.IOException
 import java.io.InputStream
 import kotlin.math.roundToInt
@@ -208,10 +210,14 @@ class R2EpubPageFragment : Fragment() {
             }
         }
 
-        webView.isHapticFeedbackEnabled = false
-        webView.isLongClickable = false
-        webView.setOnLongClickListener {
-            false
+        // Disable the text selection if the publication is protected.
+        // FIXME: This is a hack until proper LCP copy is implemented, see https://github.com/readium/r2-testapp-kotlin/issues/266
+        if (navigatorFragment.publication.isProtected) {
+            webView.isHapticFeedbackEnabled = false
+            webView.isLongClickable = false
+            webView.setOnLongClickListener {
+                true
+            }
         }
 
         resourceUrl?.let { webView.loadUrl(it) }
