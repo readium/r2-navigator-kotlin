@@ -11,6 +11,7 @@ import com.google.android.exoplayer2.upstream.DataSource
 import com.google.android.exoplayer2.upstream.DataSpec
 import com.google.android.exoplayer2.upstream.TransferListener
 
+// FIXME: Not used anymore, to delete after validating the new PublicationDataSource
 internal class CompositeDataSource private constructor(private val dataSources: List<Pair<(Uri) -> Boolean, DataSource>>) : DataSource {
 
     class Factory(dataSourceFactories: Map<(Uri) -> Boolean, DataSource.Factory> = emptyMap()) : DataSource.Factory {

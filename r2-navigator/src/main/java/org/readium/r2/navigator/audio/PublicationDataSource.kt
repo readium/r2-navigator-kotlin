@@ -14,15 +14,15 @@ import com.google.android.exoplayer2.upstream.DataSource
 import com.google.android.exoplayer2.upstream.DataSpec
 import com.google.android.exoplayer2.upstream.TransferListener
 import kotlinx.coroutines.runBlocking
-import org.readium.r2.shared.fetcher.ResourceInputStream
+import org.readium.r2.shared.fetcher.Resource
+import org.readium.r2.shared.fetcher.buffered
 import org.readium.r2.shared.publication.Publication
 import java.io.IOException
-import java.io.InputStream
 
 /**
  * An ExoPlayer's [DataSource] which retrieves resources from a [Publication].
  */
-internal class PublicationDataSource(private val publication: Publication) : BaseDataSource(/* isNetwork = */ false) {
+internal class PublicationDataSource(private val publication: Publication) : BaseDataSource(/* isNetwork = */ true) {
 
     class Factory(private val publication: Publication, private val transferListener: TransferListener? = null) : DataSource.Factory {
 
@@ -42,61 +42,99 @@ internal class PublicationDataSource(private val publication: Publication) : Bas
     }
 
     private data class OpenedResource(
-        val inputStream: InputStream,
+        val resource: Resource,
         val uri: Uri,
-        var bytesRemaining: Long
+        var position: Long,
     )
 
     private var openedResource: OpenedResource? = null
 
     override fun open(dataSpec: DataSpec): Long {
-        close()
-
         val link = publication.linkWithHref(dataSpec.uri.toString())
             ?: throw Exception.NotFound("Can't find a [Link] for URI: ${dataSpec.uri}. Make sure you only request resources declared in the manifest.")
 
-        val inputStream = ResourceInputStream(publication.get(link), autocloseResource = true)
+        val resource = publication.get(link)
             // Significantly improves performances, in particular with deflated ZIP entries.
-            .buffered()
+            .buffered(resourceLength = cachedLengths[dataSpec.uri.toString()])
 
-        inputStream.skip(dataSpec.position)
+        openedResource = OpenedResource(
+            resource = resource,
+            uri = dataSpec.uri,
+            position = dataSpec.position,
+        )
 
-        val bytesRemaining =
-            if (dataSpec.length == LENGTH_UNSET.toLong()) inputStream.available().toLong()
-            else dataSpec.length
+        val bytesToRead =
+            if (dataSpec.length != LENGTH_UNSET.toLong()) {
+                dataSpec.length
+            } else {
+                val contentLength = contentLengthOf(dataSpec.uri, resource)
+                    ?: return dataSpec.length
+                contentLength - dataSpec.position
+            }
 
-        openedResource = OpenedResource(inputStream, dataSpec.uri, bytesRemaining = bytesRemaining)
-        return bytesRemaining
+        return bytesToRead
+    }
+
+    /** Cached content lengths indexed by their URL. */
+    private var cachedLengths: MutableMap<String, Long> = mutableMapOf()
+
+    private fun contentLengthOf(uri: Uri, resource: Resource): Long? {
+        cachedLengths[uri.toString()]?.let { return it }
+
+        val length = runBlocking { resource.length() }.getOrNull()
+            ?: return null
+
+        cachedLengths[uri.toString()] = length
+        return length
     }
 
     override fun read(target: ByteArray, offset: Int, length: Int): Int {
+        if (length <= 0) {
+            return 0
+        }
+
         val openedResource = openedResource ?: throw Exception.NotOpened("No opened resource to read from. Did you call open()?")
 
-        when {
-            (length <= 0) -> return 0
-            (openedResource.bytesRemaining == 0.toLong()) -> return RESULT_END_OF_INPUT
-        }
+        try {
+            val data = runBlocking {
+                openedResource.resource
+                    .read(range = openedResource.position until (openedResource.position + length))
+                    .getOrThrow()
+            }
 
-        val bytesRead = try {
-            val bytesToRead = length.coerceAtMost(openedResource.bytesRemaining.toInt())
-            openedResource.inputStream.read(target, offset, bytesToRead)
+            if (data.isEmpty()) {
+                return RESULT_END_OF_INPUT
+            }
+
+            data.copyInto(
+                destination = target,
+                destinationOffset = offset,
+                startIndex = 0,
+                endIndex = data.size
+            )
+
+            openedResource.position += data.count()
+            return data.count()
+
         } catch (e: Exception) {
+            if (e is InterruptedException) {
+                return 0
+            }
             throw Exception.ReadFailed(uri = openedResource.uri, offset = offset, readLength = length, cause = e)
         }
-
-        if (bytesRead == -1) {
-            return RESULT_END_OF_INPUT
-        }
-
-        openedResource.bytesRemaining -= bytesRead
-        return bytesRead
     }
 
     override fun getUri(): Uri? = openedResource?.uri
 
     override fun close() {
         openedResource?.run {
-            runBlocking { inputStream.close() }
+            try {
+                runBlocking { resource.close() }
+            } catch (e: Exception) {
+                if (e !is InterruptedException) {
+                    throw e
+                }
+            }
         }
         openedResource = null
     }
