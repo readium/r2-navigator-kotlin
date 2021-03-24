@@ -39,6 +39,7 @@ import org.readium.r2.navigator.R
 import org.readium.r2.navigator.audio.PublicationDataSource
 import org.readium.r2.navigator.extensions.timeWithDuration
 import org.readium.r2.shared.AudioSupport
+import org.readium.r2.shared.extensions.asInstance
 import org.readium.r2.shared.fetcher.Resource
 import org.readium.r2.shared.publication.*
 import timber.log.Timber
@@ -168,11 +169,9 @@ class ExoMediaPlayer(
         }
 
         override fun onPlayerError(error: ExoPlaybackException) {
-            Timber.e(error)
-
-            val resourceException: Resource.Exception? = when {
-                (error.cause as? HttpDataSource.HttpDataSourceException)?.cause is UnknownHostException -> Resource.Exception.Offline
-                else -> null
+            var resourceException: Resource.Exception? = error.asInstance<Resource.Exception>()
+            if (resourceException == null && (error.cause as? HttpDataSource.HttpDataSourceException)?.cause is UnknownHostException) {
+                resourceException = Resource.Exception.Offline
             }
 
             if (resourceException != null) {
@@ -181,6 +180,8 @@ class ExoMediaPlayer(
                     ?.let { link ->
                         listener?.onResourceLoadFailed(link, resourceException)
                     }
+            } else {
+                Timber.e(error)
             }
         }
 
