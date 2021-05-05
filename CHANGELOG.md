@@ -4,7 +4,16 @@ All notable changes to this project will be documented in this file.
 
 **Warning:** Features marked as *experimental* may change or be removed in a future release without notice. Use with caution.
 
-<!--## [Unreleased]-->
+## [Unreleased]
+
+### Added
+
+* The EPUB navigator is now able to navigate to a `Locator` using its `text` context. This is useful for search results or highlights missing precise locations.
+
+### Changed
+
+* The order of precedence of `Locator` locations in the reflowable EPUB navigator is: `text`, HTML ID, then `progression`. The navigator will now fallback on less precise locations in case of failure.
+
 
 ## [2.0.0]
 
