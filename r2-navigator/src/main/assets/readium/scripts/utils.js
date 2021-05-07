@@ -160,6 +160,9 @@ var readium = (function() {
             }
         }
 
+        // Resets the selection otherwise the last found occurrence will be highlighted.
+        selection.clear();
+
         snapCurrentOffset();
         return found;
     }
