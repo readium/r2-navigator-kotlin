@@ -63,6 +63,11 @@ class R2CbzPageFragment(private val publication: Publication, private val onTapL
        return containerView
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
     private fun setupPadding() {
         updatePadding()
 

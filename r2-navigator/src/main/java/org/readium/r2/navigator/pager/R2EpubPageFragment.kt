@@ -238,6 +238,11 @@ class R2EpubPageFragment : Fragment() {
         }
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
     private fun setupPadding() {
         updatePadding()
 

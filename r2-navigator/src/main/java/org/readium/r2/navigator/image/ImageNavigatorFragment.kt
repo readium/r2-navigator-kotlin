@@ -123,6 +123,11 @@ class ImageNavigatorFragment private constructor(
         notifyCurrentLocation()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
     @Deprecated("Use goForward instead", replaceWith = ReplaceWith("goForward()"), level = DeprecationLevel.ERROR)
     fun nextResource(v: View?) {
         goForward()

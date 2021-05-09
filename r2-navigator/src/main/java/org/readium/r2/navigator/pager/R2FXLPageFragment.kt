@@ -105,6 +105,12 @@ class R2FXLPageFragment : Fragment() {
         }
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _singleBinding = null
+        _doubleBinding = null
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView(webView: R2BasicWebView, resourceUrl: String?) {
         webViews.add(webView)
