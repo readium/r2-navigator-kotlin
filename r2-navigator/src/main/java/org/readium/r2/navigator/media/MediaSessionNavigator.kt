@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 import org.readium.r2.navigator.MediaNavigator
 import org.readium.r2.navigator.extensions.sum
 import org.readium.r2.navigator.media.extensions.*
-import org.readium.r2.shared.AudioSupport
+import org.readium.r2.shared.AudiobookNavigator
 import org.readium.r2.shared.publication.*
 import timber.log.Timber
 import kotlin.math.roundToInt
@@ -41,7 +41,7 @@ private val skipForwardInterval: Duration = 30.seconds
 @OptIn(ExperimentalTime::class)
 private val skipBackwardInterval: Duration = 30.seconds
 
-@AudioSupport
+@AudiobookNavigator
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
 class MediaSessionNavigator(
     override val publication: Publication,

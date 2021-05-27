@@ -243,6 +243,7 @@ function processTouchEvent(win, ev) {
             }
 
             ev.stopPropagation();
+            ev.preventDefault()
         }
     }
 }
@@ -1877,8 +1878,6 @@ function location2RangeInfo(location) {
 }
 
 function rectangleForHighlightWithID(id) {
-
-
     const highlight = highlightWithID(id);
     if (!highlight)
         return;

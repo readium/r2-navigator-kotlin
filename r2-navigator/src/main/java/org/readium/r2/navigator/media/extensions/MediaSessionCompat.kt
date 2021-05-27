@@ -9,10 +9,10 @@ package org.readium.r2.navigator.media.extensions
 import android.os.Bundle
 import android.support.v4.media.session.MediaSessionCompat
 import org.readium.r2.navigator.media.MediaService
-import org.readium.r2.shared.AudioSupport
+import org.readium.r2.shared.AudiobookNavigator
 import org.readium.r2.shared.publication.PublicationId
 
-@AudioSupport
+@AudiobookNavigator
 internal var MediaSessionCompat.publicationId: PublicationId?
     get() = controller.publicationId
     set(value) {

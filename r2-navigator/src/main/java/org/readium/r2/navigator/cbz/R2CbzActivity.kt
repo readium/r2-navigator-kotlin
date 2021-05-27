@@ -13,8 +13,11 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.PointF
+import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.asLiveData
@@ -29,6 +32,7 @@ import org.readium.r2.navigator.VisualNavigator
 import org.readium.r2.navigator.image.ImageNavigatorFragment
 import org.readium.r2.navigator.pager.R2PagerAdapter
 import org.readium.r2.navigator.pager.R2ViewPager
+import org.readium.r2.navigator.util.CompositeFragmentFactory
 import org.readium.r2.shared.extensions.getPublication
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
@@ -45,6 +49,7 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
     protected var navigatorDelegate: NavigatorDelegate? = null
 
     protected val positions: List<Locator> get() = navigatorFragment.positions
+
     val currentPagerPosition: Int get() = navigatorFragment.currentPagerPosition
 
     override val currentLocator: StateFlow<Locator>
@@ -100,7 +105,13 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
 
         val initialLocator = intent.getParcelableExtra("locator") as? Locator
 
-        supportFragmentManager.fragmentFactory = ImageNavigatorFragment.Factory(publication, initialLocator = initialLocator, listener = this)
+        // This must be done before the call to super.onCreate, including by reading apps.
+        // Because they may want to set their own factories, let's use a CompositeFragmentFactory that retains
+        // previously set factories.
+        supportFragmentManager.fragmentFactory = CompositeFragmentFactory(
+            supportFragmentManager.fragmentFactory,
+            ImageNavigatorFragment.createFactory(publication, initialLocator = initialLocator, listener = this)
+        )
 
         super.onCreate(savedInstanceState)
 
@@ -113,6 +124,11 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
             @Suppress("DEPRECATION")
             navigatorDelegate?.locationDidChange(this, locator)
         })
+
+        // Add support for display cutout.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
     }
 
     override fun finish() {
@@ -120,12 +136,14 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
         super.finish()
     }
 
+    @Deprecated("Use goForward instead", replaceWith = ReplaceWith("goForward()"), level = DeprecationLevel.ERROR)
     override fun nextResource(v: View?) {
-        navigatorFragment.nextResource(v)
+        navigatorFragment.goForward()
     }
 
+    @Deprecated("Use goBackward instead", replaceWith = ReplaceWith("goBackward()"), level = DeprecationLevel.ERROR)
     override fun previousResource(v: View?) {
-        navigatorFragment.previousResource(v)
+        navigatorFragment.goBackward()
     }
 
     override fun toggleActionBar() {
@@ -149,6 +167,19 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
 
     override fun toggleActionBar(v: View?) {
         toggleActionBar()
+    }
+
+    override fun onTap(point: PointF): Boolean {
+        val viewWidth = navigatorFragment.requireView().width
+        val leftRange = 0.0..(0.2 * viewWidth)
+
+        when {
+            leftRange.contains(point.x) -> navigatorFragment.goBackward(animated = true)
+            leftRange.contains(viewWidth - point.x) -> navigatorFragment.goForward(animated = true)
+            else -> toggleActionBar()
+        }
+
+        return true
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

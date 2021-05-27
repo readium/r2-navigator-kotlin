@@ -23,13 +23,12 @@ import org.readium.r2.navigator.extensions.formatElapsedTime
 import org.readium.r2.navigator.extensions.let
 import org.readium.r2.navigator.extensions.viewById
 import org.readium.r2.navigator.util.createFragmentFactory
-import org.readium.r2.shared.AudioSupport
-import org.readium.r2.shared.FragmentNavigator
+import org.readium.r2.shared.AudiobookNavigator
 import org.readium.r2.shared.publication.services.cover
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
-@AudioSupport @FragmentNavigator
+@AudiobookNavigator
 @OptIn(ExperimentalTime::class)
 class AudioNavigatorFragment(
     private val mediaNavigator: MediaNavigator,

@@ -11,20 +11,18 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.Observer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.readium.r2.navigator.MediaNavigator
 import org.readium.r2.navigator.R
 import org.readium.r2.navigator.media.*
-import org.readium.r2.shared.AudioSupport
-import org.readium.r2.shared.FragmentNavigator
+import org.readium.r2.shared.AudiobookNavigator
 import org.readium.r2.shared.extensions.getPublicationOrNull
 import org.readium.r2.shared.extensions.putPublication
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.PublicationId
 
-@AudioSupport
+@AudiobookNavigator
 open class AudioActivity : AppCompatActivity() {
 
     protected lateinit var publication: Publication
@@ -37,7 +35,7 @@ open class AudioActivity : AppCompatActivity() {
     val navigator: MediaNavigator get() =
         supportFragmentManager.findFragmentById(R.id.audio_navigator) as MediaNavigator
 
-    @OptIn(FragmentNavigator::class, ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         val intentPublication = intent.getPublicationOrNull(this)
         val intentPublicationId = intent.getStringExtra(EXTRA_LOCATOR)
