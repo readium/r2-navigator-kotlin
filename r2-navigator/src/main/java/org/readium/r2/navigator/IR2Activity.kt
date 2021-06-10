@@ -20,7 +20,13 @@ import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.ReadingProgression
 
-interface IR2Activity {
+interface IR2Listener {
+    fun onPageChanged(pageIndex: Int, totalPages: Int, url: String) {}
+    fun onPageEnded(end: Boolean) {}
+    fun onPageLoaded() {}
+}
+
+interface IR2Activity: IR2Listener {
 
     val publication: Publication
     val preferences: SharedPreferences
@@ -37,9 +43,6 @@ interface IR2Activity {
     fun toggleActionBar(v: View? = null) {}
     fun nextResource(v: View? = null) {}
     fun previousResource(v: View? = null) {}
-    fun onPageChanged(pageIndex: Int, totalPages: Int, url: String) {}
-    fun onPageEnded(end: Boolean) {}
-    fun onPageLoaded() {}
     fun highlightActivated(id: String) {}
     fun highlightAnnotationMarkActivated(id: String) {}
 }

@@ -20,10 +20,7 @@ import androidx.viewpager.widget.ViewPager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.readium.r2.navigator.NavigatorDelegate
-import org.readium.r2.navigator.R
-import org.readium.r2.navigator.R2BasicWebView
-import org.readium.r2.navigator.VisualNavigator
+import org.readium.r2.navigator.*
 import org.readium.r2.navigator.extensions.htmlId
 import org.readium.r2.navigator.extensions.positionsByResource
 import org.readium.r2.navigator.extensions.withBaseUrl
@@ -53,7 +50,7 @@ class EpubNavigatorFragment private constructor(
     internal val listener: Listener? = null
 ): Fragment(), CoroutineScope by MainScope(), VisualNavigator, R2BasicWebView.Listener {
 
-    interface Listener: VisualNavigator.Listener
+    interface Listener: VisualNavigator.Listener, IR2Listener
 
     init {
         require(!publication.isRestricted) { "The provided publication is restricted. Check that any DRM was properly unlocked using a Content Protection."}
@@ -73,8 +70,6 @@ class EpubNavigatorFragment private constructor(
     private lateinit var currentActivity: FragmentActivity
 
     internal var navigatorDelegate: NavigatorDelegate? = null
-
-    private val r2Activity: R2EpubActivity? get() = activity as? R2EpubActivity
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         currentActivity = requireActivity()
@@ -283,19 +278,19 @@ class EpubNavigatorFragment private constructor(
     // R2BasicWebView.Listener
 
     override fun onPageLoaded() {
-        r2Activity?.onPageLoaded()
+        listener?.onPageLoaded()
     }
 
     override fun onPageChanged(pageIndex: Int, totalPages: Int, url: String) {
-        r2Activity?.onPageChanged(pageIndex = pageIndex, totalPages = totalPages, url = url)
+        listener?.onPageChanged(pageIndex = pageIndex, totalPages = totalPages, url = url)
     }
 
     override fun onPageEnded(end: Boolean) {
-        r2Activity?.onPageEnded(end)
+        listener?.onPageEnded(end)
     }
 
     override fun onScroll() {
-        val activity = r2Activity ?: return
+        val activity = activity as? R2EpubActivity ?: return
         if (activity.supportActionBar?.isShowing == true && activity.allowToggleActionBar) {
             resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -315,11 +310,13 @@ class EpubNavigatorFragment private constructor(
     }
 
     override fun onHighlightActivated(id: String) {
-        r2Activity?.highlightActivated(id)
+        val activity = activity as? R2EpubActivity ?: return
+        activity?.highlightActivated(id)
     }
 
     override fun onHighlightAnnotationMarkActivated(id: String) {
-        r2Activity?.highlightAnnotationMarkActivated(id)
+        val activity = activity as? R2EpubActivity ?: return
+        activity?.highlightAnnotationMarkActivated(id)
     }
 
     override fun goForward(animated: Boolean, completion: () -> Unit): Boolean {
