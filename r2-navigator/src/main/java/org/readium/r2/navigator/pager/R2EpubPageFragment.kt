@@ -30,6 +30,7 @@ import org.readium.r2.navigator.Navigator
 import org.readium.r2.navigator.R
 import org.readium.r2.navigator.R2BasicWebView
 import org.readium.r2.navigator.R2WebView
+import org.readium.r2.navigator.databinding.ViewpagerFragmentEpubBinding
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.extensions.htmlId
 import org.readium.r2.shared.SCROLL_REF
@@ -50,13 +51,17 @@ class R2EpubPageFragment : Fragment() {
     private lateinit var containerView: View
     private lateinit var preferences: SharedPreferences
 
+    private var _binding: ViewpagerFragmentEpubBinding? = null
+    private val binding get() = _binding!!
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val navigatorFragment = parentFragment as EpubNavigatorFragment
-        containerView = inflater.inflate(R.layout.viewpager_fragment_epub, container, false)
+        _binding = ViewpagerFragmentEpubBinding.inflate(inflater, container, false)
+        containerView = binding.root
         preferences = activity?.getSharedPreferences("org.readium.r2.settings", Context.MODE_PRIVATE)!!
 
-        val webView = containerView.findViewById(R.id.webView) as R2WebView
+        val webView = binding.webView
         this.webView = webView
 
         webView.navigator = parentFragment as Navigator
@@ -121,8 +126,9 @@ class R2EpubPageFragment : Fragment() {
                     (epubNavigator?.resourcePager?.adapter as? R2PagerAdapter)?.getCurrentFragment() as? R2EpubPageFragment
 
                 if (currentFragment != null && this@R2EpubPageFragment.tag == currentFragment.tag) {
-                    var locations = epubNavigator.pendingLocator?.locations
+                    val locator = epubNavigator.pendingLocator
                     epubNavigator.pendingLocator = null
+                    var locations = locator?.locations
 
                     // TODO this seems to be needed, will need to test more
                     if (url != null && url.indexOf("#") > 0) {
@@ -137,31 +143,42 @@ class R2EpubPageFragment : Fragment() {
                             // FIXME: We need a better way to wait, because if the value is too low it fails
                             delay(200)
 
+                            val text = locator?.text
+                            if (text?.highlight != null) {
+                                if (currentWebView.scrollToText(text)) {
+                                    return@launchWhenStarted
+                                }
+
+                                // The delay is necessary before falling back on the other
+                                // locations, because scrollToText() is moving the scroll position
+                                // while looking for the text snippet.
+                                delay(100)
+                            }
+
                             val htmlId = locations.htmlId
+                            if (htmlId != null && currentWebView.scrollToId(htmlId)) {
+                                return@launchWhenStarted
+                            }
+
                             var progression = locations.progression
+                            if (progression != null) {
+                                // We need to reverse the progression with RTL because the Web View
+                                // always scrolls from left to right, no matter the reading direction.
+                                progression =
+                                    if (webView.scrollMode || navigatorFragment.readingProgression == ReadingProgression.LTR) progression
+                                    else 1 - progression
 
-                            when {
-                                htmlId != null -> currentWebView.scrollToId(htmlId)
+                                if (webView.scrollMode) {
+                                    currentWebView.scrollToPosition(progression)
 
-                                progression != null -> {
-                                    // We need to reverse the progression with RTL because the Web View
-                                    // always scrolls from left to right, no matter the reading direction.
-                                    progression =
-                                        if (webView.scrollMode || navigatorFragment.readingProgression == ReadingProgression.LTR) progression
-                                        else 1 - progression
-
-                                    if (webView.scrollMode) {
-                                        currentWebView.scrollToPosition(progression)
-
-                                    } else {
-                                        // Figure out the target web view "page" from the requested
-                                        // progression.
-                                        var item = (progression * currentWebView.numPages).roundToInt()
-                                        if (navigatorFragment.readingProgression == ReadingProgression.RTL && item > 0) {
-                                            item -= 1
-                                        }
-                                        currentWebView.setCurrentItem(item, false)
+                                } else {
+                                    // Figure out the target web view "page" from the requested
+                                    // progression.
+                                    var item = (progression * currentWebView.numPages).roundToInt()
+                                    if (navigatorFragment.readingProgression == ReadingProgression.RTL && item > 0) {
+                                        item -= 1
                                     }
+                                    currentWebView.setCurrentItem(item, false)
                                 }
                             }
                         }
@@ -231,6 +248,11 @@ class R2EpubPageFragment : Fragment() {
             wv.removeAllViews()
             wv.destroy()
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     private fun setupPadding() {

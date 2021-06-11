@@ -20,7 +20,12 @@ import androidx.viewpager.widget.ViewPager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.readium.r2.navigator.*
+import org.readium.r2.navigator.NavigatorDelegate
+import org.readium.r2.navigator.R
+import org.readium.r2.navigator.IR2Listener
+import org.readium.r2.navigator.R2BasicWebView
+import org.readium.r2.navigator.VisualNavigator
+import org.readium.r2.navigator.databinding.ActivityR2ViewpagerBinding
 import org.readium.r2.navigator.extensions.htmlId
 import org.readium.r2.navigator.extensions.positionsByResource
 import org.readium.r2.navigator.extensions.withBaseUrl
@@ -71,13 +76,17 @@ class EpubNavigatorFragment private constructor(
 
     internal var navigatorDelegate: NavigatorDelegate? = null
 
+    private var _binding: ActivityR2ViewpagerBinding? = null
+    private val binding get() = _binding!!
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         currentActivity = requireActivity()
-        val view = inflater.inflate(R.layout.activity_r2_viewpager, container, false)
+        _binding = ActivityR2ViewpagerBinding.inflate(inflater, container, false)
+        val view = binding.root
 
         preferences = requireContext().getSharedPreferences("org.readium.r2.settings", Context.MODE_PRIVATE)
 
-        resourcePager = view.findViewById(R.id.resourcePager)
+        resourcePager = binding.resourcePager
         resourcePager.type = Publication.TYPE.EPUB
 
         resourcesSingle = ArrayList()
