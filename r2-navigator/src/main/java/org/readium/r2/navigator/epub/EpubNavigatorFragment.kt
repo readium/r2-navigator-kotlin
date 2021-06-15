@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.readium.r2.navigator.NavigatorDelegate
 import org.readium.r2.navigator.R
-import org.readium.r2.navigator.IR2Listener
 import org.readium.r2.navigator.R2BasicWebView
 import org.readium.r2.navigator.VisualNavigator
 import org.readium.r2.navigator.databinding.ActivityR2ViewpagerBinding
@@ -52,10 +51,16 @@ class EpubNavigatorFragment private constructor(
     internal val publication: Publication,
     private val baseUrl: String,
     private val initialLocator: Locator? = null,
-    internal val listener: Listener? = null
+    internal val listener: Listener? = null,
+    internal val paginationListener: PaginationListener? = null
 ): Fragment(), CoroutineScope by MainScope(), VisualNavigator, R2BasicWebView.Listener {
 
-    interface Listener: VisualNavigator.Listener, IR2Listener
+    interface PaginationListener {
+        fun onPageChanged(pageNumber: Int, totalPages: Int, locator: Locator) {}
+        fun onPageLoaded() {}
+    }
+
+    interface Listener: VisualNavigator.Listener
 
     init {
         require(!publication.isRestricted) { "The provided publication is restricted. Check that any DRM was properly unlocked using a Content Protection."}
@@ -75,6 +80,8 @@ class EpubNavigatorFragment private constructor(
     private lateinit var currentActivity: FragmentActivity
 
     internal var navigatorDelegate: NavigatorDelegate? = null
+
+    private val r2Activity: R2EpubActivity? get() = activity as? R2EpubActivity
 
     private var _binding: ActivityR2ViewpagerBinding? = null
     private val binding get() = _binding!!
@@ -287,19 +294,35 @@ class EpubNavigatorFragment private constructor(
     // R2BasicWebView.Listener
 
     override fun onPageLoaded() {
-        listener?.onPageLoaded()
+        r2Activity?.onPageLoaded()
+        paginationListener?.onPageLoaded()
     }
 
     override fun onPageChanged(pageIndex: Int, totalPages: Int, url: String) {
-        listener?.onPageChanged(pageIndex = pageIndex, totalPages = totalPages, url = url)
+        r2Activity?.onPageChanged(pageIndex = pageIndex, totalPages = totalPages, url = url)
+        if(paginationListener != null) {
+            // Find current locator
+            val resource = publication.readingOrder[resourcePager.currentItem]
+            val progression = currentFragment?.webView?.progression?.coerceIn(0.0, 1.0) ?: 0.0
+            val positions = publication.positionsByResource[resource.href]?.takeIf { it.isNotEmpty() }
+                    ?: return
+
+            val positionIndex = ceil(progression * (positions.size - 1)).toInt()
+            if (!positions.indices.contains(positionIndex)) {
+                return
+            }
+
+            val locator = positions[positionIndex].copyWithLocations(progression = progression)
+            paginationListener.onPageChanged(pageIndex, totalPages, locator)
+        }
     }
 
     override fun onPageEnded(end: Boolean) {
-        listener?.onPageEnded(end)
+        r2Activity?.onPageEnded(end)
     }
 
     override fun onScroll() {
-        val activity = activity as? R2EpubActivity ?: return
+        val activity = r2Activity ?: return
         if (activity.supportActionBar?.isShowing == true && activity.allowToggleActionBar) {
             resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -319,13 +342,11 @@ class EpubNavigatorFragment private constructor(
     }
 
     override fun onHighlightActivated(id: String) {
-        val activity = activity as? R2EpubActivity ?: return
-        activity?.highlightActivated(id)
+        r2Activity?.highlightActivated(id)
     }
 
     override fun onHighlightAnnotationMarkActivated(id: String) {
-        val activity = activity as? R2EpubActivity ?: return
-        activity?.highlightAnnotationMarkActivated(id)
+        r2Activity?.highlightAnnotationMarkActivated(id)
     }
 
     override fun goForward(animated: Boolean, completion: () -> Unit): Boolean {
@@ -433,8 +454,8 @@ class EpubNavigatorFragment private constructor(
          *        publication. Can be used to restore the last reading location.
          * @param listener Optional listener to implement to observe events, such as user taps.
          */
-        fun createFactory(publication: Publication, baseUrl: String, initialLocator: Locator? = null, listener: Listener? = null): FragmentFactory =
-            createFragmentFactory { EpubNavigatorFragment(publication, baseUrl, initialLocator, listener) }
+        fun createFactory(publication: Publication, baseUrl: String, initialLocator: Locator? = null, listener: Listener? = null, paginationListener: PaginationListener? = null): FragmentFactory =
+            createFragmentFactory { EpubNavigatorFragment(publication, baseUrl, initialLocator, listener, paginationListener) }
 
     }
 
