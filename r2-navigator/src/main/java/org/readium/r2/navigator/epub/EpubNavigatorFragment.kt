@@ -56,7 +56,7 @@ class EpubNavigatorFragment private constructor(
 ): Fragment(), CoroutineScope by MainScope(), VisualNavigator, R2BasicWebView.Listener {
 
     interface PaginationListener {
-        fun onPageChanged(pageNumber: Int, totalPages: Int, locator: Locator) {}
+        fun onPageChanged(pageIndex: Int, totalPages: Int, locator: Locator) {}
         fun onPageLoaded() {}
     }
 
@@ -313,7 +313,8 @@ class EpubNavigatorFragment private constructor(
             }
 
             val locator = positions[positionIndex].copyWithLocations(progression = progression)
-            paginationListener.onPageChanged(pageIndex, totalPages, locator)
+            // Pageindex is actually the page number so to get a zero based index we subtract one.
+            paginationListener.onPageChanged(pageIndex - 1, totalPages, locator)
         }
     }
 
