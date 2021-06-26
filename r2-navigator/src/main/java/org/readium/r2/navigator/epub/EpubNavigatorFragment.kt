@@ -104,7 +104,7 @@ class EpubNavigatorFragment private constructor(
         // TODO needs work, currently showing two resources for fxl, needs to understand which two resources, left & right, or only right etc.
         var doublePageIndex = 0
         var doublePageLeft = ""
-        var doublePageRight = ""
+        var doublePageRight: String
         var resourceIndexDouble = 0
 
         for ((resourceIndexSingle, spineItem) in publication.readingOrder.withIndex()) {
