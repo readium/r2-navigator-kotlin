@@ -202,7 +202,6 @@ export function rangeFromLocator(locator) {
   }
 }
 
-
 /// User Settings.
 
 // For setting user setting.

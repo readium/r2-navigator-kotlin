@@ -27,6 +27,8 @@ import org.readium.r2.navigator.databinding.ActivityR2ViewpagerBinding
 import org.readium.r2.navigator.extensions.htmlId
 import org.readium.r2.navigator.extensions.positionsByResource
 import org.readium.r2.navigator.extensions.withBaseUrl
+import org.readium.r2.navigator.html.HtmlDecorationTemplate
+import org.readium.r2.navigator.html.HtmlDecorationTemplates
 import org.readium.r2.navigator.pager.R2EpubPageFragment
 import org.readium.r2.navigator.pager.R2PagerAdapter
 import org.readium.r2.navigator.pager.R2ViewPager
@@ -50,9 +52,10 @@ import kotlin.math.ceil
 class EpubNavigatorFragment private constructor(
     internal val publication: Publication,
     private val baseUrl: String,
-    private val initialLocator: Locator? = null,
-    internal val listener: Listener? = null,
-    internal val paginationListener: PaginationListener? = null
+    private val initialLocator: Locator?,
+    private val decorationStyles: HtmlDecorationTemplates,
+    internal val listener: Listener?,
+    internal val paginationListener: PaginationListener?,
 ): Fragment(), CoroutineScope by MainScope(), VisualNavigator, SelectableNavigator, R2BasicWebView.Listener {
 
     interface PaginationListener {
@@ -491,9 +494,17 @@ class EpubNavigatorFragment private constructor(
          * @param initialLocator The first location which should be visible when rendering the
          *        publication. Can be used to restore the last reading location.
          * @param listener Optional listener to implement to observe events, such as user taps.
+         * @param decorationStyles Supported decoration styles.
          */
-        fun createFactory(publication: Publication, baseUrl: String, initialLocator: Locator? = null, listener: Listener? = null, paginationListener: PaginationListener? = null): FragmentFactory =
-            createFragmentFactory { EpubNavigatorFragment(publication, baseUrl, initialLocator, listener, paginationListener) }
+        fun createFactory(
+            publication: Publication,
+            baseUrl: String,
+            initialLocator: Locator? = null,
+            listener: Listener? = null,
+            paginationListener: PaginationListener? = null,
+            decorationStyles: HtmlDecorationTemplates = HtmlDecorationTemplate.defaultStyles(),
+        ): FragmentFactory =
+            createFragmentFactory { EpubNavigatorFragment(publication, baseUrl, initialLocator, decorationStyles, listener, paginationListener) }
 
     }
 
