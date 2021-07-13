@@ -27,6 +27,7 @@ import {
   rectangleForHighlightWithID,
   setScrollMode,
 } from "./highlight";
+import { getCurrentSelection } from "./selection";
 
 // Public API used by the navigator.
 window.readium = {
@@ -40,6 +41,9 @@ window.readium = {
   scrollToEnd: scrollToEnd,
   setProperty: setProperty,
   removeProperty: removeProperty,
+
+  // selection
+  getCurrentSelection: getCurrentSelection,
 };
 
 // Legacy highlights API.

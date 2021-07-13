@@ -429,7 +429,7 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
         }
     }
 
-    private suspend fun runJavaScriptSuspend(javascript: String): String = suspendCoroutine { cont ->
+    internal suspend fun runJavaScriptSuspend(javascript: String): String = suspendCoroutine { cont ->
         runJavaScript(javascript) { result ->
             cont.resume(result)
         }

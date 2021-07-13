@@ -9,6 +9,7 @@ package org.readium.r2.navigator.epub
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.PointF
+import android.graphics.RectF
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -20,9 +21,8 @@ import androidx.viewpager.widget.ViewPager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.readium.r2.navigator.NavigatorDelegate
-import org.readium.r2.navigator.R2BasicWebView
-import org.readium.r2.navigator.VisualNavigator
+import org.json.JSONObject
+import org.readium.r2.navigator.*
 import org.readium.r2.navigator.databinding.ActivityR2ViewpagerBinding
 import org.readium.r2.navigator.extensions.htmlId
 import org.readium.r2.navigator.extensions.positionsByResource
@@ -33,6 +33,7 @@ import org.readium.r2.navigator.pager.R2ViewPager
 import org.readium.r2.navigator.util.createFragmentFactory
 import org.readium.r2.shared.COLUMN_COUNT_REF
 import org.readium.r2.shared.SCROLL_REF
+import org.readium.r2.shared.extensions.tryOrLog
 import org.readium.r2.shared.publication.*
 import org.readium.r2.shared.publication.epub.EpubLayout
 import org.readium.r2.shared.publication.presentation.presentation
@@ -52,7 +53,7 @@ class EpubNavigatorFragment private constructor(
     private val initialLocator: Locator? = null,
     internal val listener: Listener? = null,
     internal val paginationListener: PaginationListener? = null
-): Fragment(), CoroutineScope by MainScope(), VisualNavigator, R2BasicWebView.Listener {
+): Fragment(), CoroutineScope by MainScope(), VisualNavigator, SelectableNavigator, R2BasicWebView.Listener {
 
     interface PaginationListener {
         fun onPageChanged(pageIndex: Int, totalPages: Int, locator: Locator) {}
@@ -291,6 +292,39 @@ class EpubNavigatorFragment private constructor(
 
     override fun go(link: Link, animated: Boolean, completion: () -> Unit): Boolean {
         return go(link.toLocator(), animated, completion)
+    }
+
+    // SelectableNavigator
+
+    override suspend fun currentSelection(): Selection? {
+        val index = resourcePager.currentItem
+        val webView = (r2PagerAdapter.mFragments.get(r2PagerAdapter.getItemId(index)) as? R2EpubPageFragment)?.webView
+            ?: return null
+        val link = publication.readingOrder[index]
+
+        val result = webView.runJavaScriptSuspend("""(function(){
+                readium.link = ${link.toJSON()};
+                return readium.getCurrentSelection();
+            })()""")
+        val resultJSON = tryOrLog { JSONObject(result) } ?: return null
+
+        val locator = resultJSON.optJSONObject("locator")
+            ?.let { Locator.fromJSON(it) }
+            ?: return null
+
+        val rect = resultJSON.optJSONObject("rect")?.let { rectJSON ->
+            val left = rectJSON.optDouble("left").toFloat()
+            val top = rectJSON.optDouble("top").toFloat()
+            val right = rectJSON.optDouble("right").toFloat()
+            val bottom = rectJSON.optDouble("bottom").toFloat()
+            RectF(left, top, right, bottom)
+        }
+
+        return Selection(locator, rect)
+    }
+
+    override fun clearSelection() {
+        currentFragment?.webView?.runJavaScript("window.getSelection().removeAllRanges();")
     }
 
     // R2BasicWebView.Listener

@@ -6,9 +6,7 @@
 
 package org.readium.r2.navigator
 
-import android.graphics.Rect
-import android.text.Selection
-import kotlinx.coroutines.flow.StateFlow
+import android.graphics.RectF
 import org.readium.r2.shared.publication.Locator
 
 /**
@@ -17,7 +15,7 @@ import org.readium.r2.shared.publication.Locator
 interface SelectableNavigator : Navigator {
 
     /** Currently selected content. */
-    val currentSelection: StateFlow<Selection?>
+    suspend fun currentSelection(): Selection?
 
     /** Clears the current selection. */
     fun clearSelection()
@@ -32,5 +30,5 @@ interface SelectableNavigator : Navigator {
  */
 data class Selection(
     val locator: Locator,
-    val rect: Rect?,
+    val rect: RectF?,
 )
