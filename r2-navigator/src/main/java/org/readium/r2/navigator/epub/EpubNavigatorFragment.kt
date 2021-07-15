@@ -31,10 +31,12 @@ import org.readium.r2.navigator.html.HtmlDecorationTemplate
 import org.readium.r2.navigator.html.HtmlDecorationTemplates
 import org.readium.r2.navigator.pager.R2EpubPageFragment
 import org.readium.r2.navigator.pager.R2PagerAdapter
+import org.readium.r2.navigator.pager.R2PagerAdapter.PageResource
 import org.readium.r2.navigator.pager.R2ViewPager
 import org.readium.r2.navigator.util.createFragmentFactory
 import org.readium.r2.shared.COLUMN_COUNT_REF
 import org.readium.r2.shared.SCROLL_REF
+import org.readium.r2.shared.extensions.addPrefix
 import org.readium.r2.shared.extensions.tryOrLog
 import org.readium.r2.shared.publication.*
 import org.readium.r2.shared.publication.epub.EpubLayout
@@ -72,8 +74,8 @@ class EpubNavigatorFragment private constructor(
     internal lateinit var positions: List<Locator>
     lateinit var resourcePager: R2ViewPager
 
-    private lateinit var resourcesSingle: ArrayList<Pair<Int, String>>
-    private lateinit var resourcesDouble: ArrayList<Triple<Int, String, String>>
+    private lateinit var resourcesSingle: List<PageResource>
+    private lateinit var resourcesDouble: List<PageResource>
 
     internal lateinit var preferences: SharedPreferences
     internal lateinit var publicationIdentifier: String
@@ -96,71 +98,74 @@ class EpubNavigatorFragment private constructor(
 
         preferences = requireContext().getSharedPreferences("org.readium.r2.settings", Context.MODE_PRIVATE)
 
-        resourcePager = binding.resourcePager
-        resourcePager.type = Publication.TYPE.EPUB
-
-        resourcesSingle = ArrayList()
-        resourcesDouble = ArrayList()
-
         positions = runBlocking { publication.positions() }
         publicationIdentifier = publication.metadata.identifier ?: publication.metadata.title
 
-        // TODO needs work, currently showing two resources for fxl, needs to understand which two resources, left & right, or only right etc.
-        var doublePageIndex = 0
-        var doublePageLeft = ""
-        var doublePageRight: String
-        var resourceIndexDouble = 0
-
-        for ((resourceIndexSingle, spineItem) in publication.readingOrder.withIndex()) {
-            val uri: String = spineItem.withBaseUrl(baseUrl).href
-            resourcesSingle.add(Pair(resourceIndexSingle, uri))
-
-            // add first page to the right,
-            if (resourceIndexDouble == 0) {
-                doublePageLeft = ""
-                doublePageRight = uri
-                resourcesDouble.add(Triple(resourceIndexDouble, doublePageLeft, doublePageRight))
-                resourceIndexDouble++
-            } else {
-                // add double pages, left & right
-                if (doublePageIndex == 0) {
-                    doublePageLeft = uri
-                    doublePageIndex = 1
-                } else {
-                    doublePageRight = uri
-                    doublePageIndex = 0
-                    resourcesDouble.add(Triple(resourceIndexDouble, doublePageLeft, doublePageRight))
-                    resourceIndexDouble++
-                }
-            }
-        }
-        // add last page if there is only a left page remaining
-        if (doublePageIndex == 1) {
-            doublePageIndex = 0
-            resourcesDouble.add(Triple(resourceIndexDouble, doublePageLeft, ""))
-        }
+        resourcePager = binding.resourcePager
+        resourcePager.type = Publication.TYPE.EPUB
 
         if (publication.metadata.presentation.layout == EpubLayout.REFLOWABLE) {
-            adapter = R2PagerAdapter(childFragmentManager, resourcesSingle, publication.metadata.title, Publication.TYPE.EPUB)
+            resourcesSingle = publication.readingOrder.map { link ->
+                PageResource.EpubReflowable(
+                    link = link,
+                    url = link.withBaseUrl(baseUrl).href
+                )
+            }
+
+            adapter = R2PagerAdapter(childFragmentManager, resourcesSingle)
             resourcePager.type = Publication.TYPE.EPUB
+
         } else {
+            val resourcesSingle = mutableListOf<PageResource>()
+            val resourcesDouble = mutableListOf<PageResource>()
+
+            // TODO needs work, currently showing two resources for fxl, needs to understand which two resources, left & right, or only right etc.
+            var doublePageLeft = ""
+            var doublePageRight = ""
+
+            for ((index, link) in publication.readingOrder.withIndex()) {
+                val url = link.withBaseUrl(baseUrl).href
+                resourcesSingle.add(PageResource.EpubFxl(url))
+
+                // add first page to the right,
+                if (index == 0) {
+                    resourcesDouble.add(PageResource.EpubFxl("", url))
+                } else {
+                    // add double pages, left & right
+                    if (doublePageLeft == "") {
+                        doublePageLeft = url
+                    } else {
+                        doublePageRight = url
+                        resourcesDouble.add(PageResource.EpubFxl(doublePageLeft, doublePageRight))
+                        doublePageLeft = ""
+                    }
+                }
+            }
+            // add last page if there is only a left page remaining
+            if (doublePageLeft != "") {
+                resourcesDouble.add(PageResource.EpubFxl(doublePageLeft, ""))
+            }
+
+            this.resourcesSingle = resourcesSingle
+            this.resourcesDouble = resourcesDouble
+
             resourcePager.type = Publication.TYPE.FXL
             adapter = when (preferences.getInt(COLUMN_COUNT_REF, 0)) {
                 1 -> {
-                    R2PagerAdapter(childFragmentManager, resourcesSingle, publication.metadata.title, Publication.TYPE.FXL)
+                    R2PagerAdapter(childFragmentManager, resourcesSingle)
                 }
                 2 -> {
-                    R2PagerAdapter(childFragmentManager, resourcesDouble, publication.metadata.title, Publication.TYPE.FXL)
+                    R2PagerAdapter(childFragmentManager, resourcesDouble)
                 }
                 else -> {
                     // TODO based on device
                     // TODO decide if 1 page or 2 page
-                    R2PagerAdapter(childFragmentManager, resourcesSingle, publication.metadata.title, Publication.TYPE.FXL)
+                    R2PagerAdapter(childFragmentManager, resourcesSingle)
                 }
             }
         }
-        resourcePager.adapter = adapter
 
+        resourcePager.adapter = adapter
         resourcePager.direction = publication.metadata.effectiveReadingProgression
 
         if (publication.cssStyle == ReadingProgression.RTL.value) {
@@ -227,45 +232,28 @@ class EpubNavigatorFragment private constructor(
     override fun go(locator: Locator, animated: Boolean, completion: () -> Unit): Boolean {
         pendingLocator = locator
 
-        // href is the link to the page in the toc
-        var href = locator.href
+        val href = locator.href
+            // Remove anchor
+            .substringBefore("#")
 
-        if (href.indexOf("#") > 0) {
-            href = href.substring(0, href.indexOf("#"))
-        }
-
-        fun setCurrent(resources: ArrayList<*>) {
-            for (resource in resources) {
-                if (resource is Pair<*, *>) {
-                    val resourceFirst = resource.first as Int
-                    val resourceSecond = resource.second as String
-                    if (resourceSecond.endsWith(href)) {
-                        if (resourcePager.currentItem == resourceFirst) {
-                            // reload webview if it has an anchor
-                            var anchor = locator.locations.htmlId
-                            if (anchor != null) {
-                                if (!anchor.startsWith("#")) {
-                                    anchor = "#$anchor"
-                                }
-                                val goto = resourceSecond + anchor
-                                currentFragment?.webView?.loadUrl(goto)
-                            } else {
-                                currentFragment?.webView?.loadUrl(resourceSecond)
-                            }
-                        } else {
-                            resourcePager.currentItem = resourceFirst
-                        }
-                        break
-                    }
-                } else if (resource is Triple<*,*,*>) {
-                    val resourceFirst = resource.first as Int
-                    val resourceSecond = resource.second as String
-                    val resourceThird = resource.third as String
-                    if (resourceSecond.endsWith(href) || resourceThird.endsWith(href)) {
-                        resourcePager.currentItem = resourceFirst
-                        break
-                    }
+        fun setCurrent(resources: List<PageResource>) {
+            val page = resources.withIndex().firstOrNull { (_, res) ->
+                when (res) {
+                    is PageResource.EpubReflowable -> res.link.href == href
+                    is PageResource.EpubFxl -> res.url1.endsWith(href) || res.url2?.endsWith(href) == true
+                    else -> false
                 }
+            } ?: return
+            val (index, resource) = page
+
+            if (resourcePager.currentItem != index) {
+                resourcePager.currentItem = index
+            } else if (resource is PageResource.EpubReflowable) {
+                var url = resource.url
+                locator.locations.htmlId?.let { htmlId ->
+                    url += htmlId.addPrefix("#")
+                }
+                currentFragment?.webView?.loadUrl(url)
             }
         }
 
