@@ -168,12 +168,24 @@ data class HtmlDecorationTemplate(
     }
 }
 
-class HtmlDecorationTemplates {
-    internal val styles = mutableMapOf<KClass<*>, HtmlDecorationTemplate>()
+class HtmlDecorationTemplates private constructor(
+    internal val styles: MutableMap<KClass<*>, HtmlDecorationTemplate> = mutableMapOf()
+): JSONable {
+
+    operator fun <S : Style> get(style: KClass<S>): HtmlDecorationTemplate? =
+        styles[style]
 
     operator fun <S : Style> set(style: KClass<S>, template: HtmlDecorationTemplate) {
         styles[style] = template
     }
+
+    override fun toJSON() = JSONObject(
+        styles.entries.associate {
+            it.key.qualifiedName!! to it.value.toJSON()
+        }
+    )
+
+    fun copy() = HtmlDecorationTemplates(styles.toMutableMap())
 
     companion object {
         operator fun invoke(build: HtmlDecorationTemplates.() -> Unit): HtmlDecorationTemplates =

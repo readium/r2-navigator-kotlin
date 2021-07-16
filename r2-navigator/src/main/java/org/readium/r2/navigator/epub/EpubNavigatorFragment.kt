@@ -14,6 +14,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.collection.forEach
+import androidx.core.view.get
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentFactory
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONObject
 import org.readium.r2.navigator.*
 import org.readium.r2.navigator.databinding.ActivityR2ViewpagerBinding
+import org.readium.r2.navigator.epub.extensions.javascriptForGroup
 import org.readium.r2.navigator.extensions.htmlId
 import org.readium.r2.navigator.extensions.positionsByResource
 import org.readium.r2.navigator.extensions.withBaseUrl
@@ -43,7 +46,9 @@ import org.readium.r2.shared.publication.epub.EpubLayout
 import org.readium.r2.shared.publication.presentation.presentation
 import org.readium.r2.shared.publication.services.isRestricted
 import org.readium.r2.shared.publication.services.positions
+import timber.log.Timber
 import kotlin.math.ceil
+import kotlin.reflect.KClass
 
 /**
  * Navigator for EPUB publications.
@@ -55,10 +60,10 @@ class EpubNavigatorFragment private constructor(
     internal val publication: Publication,
     private val baseUrl: String,
     private val initialLocator: Locator?,
-    private val decorationStyles: HtmlDecorationTemplates,
     internal val listener: Listener?,
     internal val paginationListener: PaginationListener?,
-): Fragment(), CoroutineScope by MainScope(), VisualNavigator, SelectableNavigator, R2BasicWebView.Listener {
+    decorationStyles: HtmlDecorationTemplates,
+): Fragment(), CoroutineScope by MainScope(), VisualNavigator, SelectableNavigator, DecorableNavigator, R2BasicWebView.Listener {
 
     interface PaginationListener {
         fun onPageChanged(pageIndex: Int, totalPages: Int, locator: Locator) {}
@@ -70,6 +75,10 @@ class EpubNavigatorFragment private constructor(
     init {
         require(!publication.isRestricted) { "The provided publication is restricted. Check that any DRM was properly unlocked using a Content Protection."}
     }
+
+    // Make a copy to prevent new decoration styles from being registered after initializing the
+    // navigator.
+    private val decorationStyles = decorationStyles.copy()
 
     internal lateinit var positions: List<Locator>
     lateinit var resourcePager: R2ViewPager
@@ -318,7 +327,41 @@ class EpubNavigatorFragment private constructor(
         currentFragment?.webView?.runJavaScript("window.getSelection().removeAllRanges();")
     }
 
+    // DecorableNavigator
+
+    /** Current decorations, indexed by the group name. */
+    private val decorations = mutableMapOf<String, List<Decoration>>()
+
+    override fun <T : Decoration.Style> supportsDecorationStyle(style: KClass<T>): Boolean =
+        decorationStyles.styles.containsKey(style)
+
+    override suspend fun applyDecorations(decorations: List<Decoration>, group: String) {
+        val source = this.decorations[group] ?: emptyList()
+        val target = decorations.toList()
+        this.decorations[group] = target
+
+        if (target.isEmpty()) {
+            r2PagerAdapter.mFragments.forEach { _, fragment ->
+                (fragment as? R2EpubPageFragment)?.webView
+                    ?.runJavaScript("readium.getDecorations('$group').clear();")
+            }
+
+        } else {
+            for ((href, changes) in source.changesByHref(target)) {
+                val webView = loadedFragmentForHref(href)?.webView ?: continue
+                val script = changes.javascriptForGroup(group, decorationStyles) ?: continue
+                webView.runJavaScript(script)
+            }
+        }
+    }
+
     // R2BasicWebView.Listener
+
+    override fun onResourceLoaded(link: Link?, webView: R2BasicWebView, url: String?) {
+        val styles = decorationStyles.toJSON().toString()
+            .replace("\\n", " ")
+        webView.runJavaScript("readium.registerDecorationStyles($styles);")
+    }
 
     override fun onPageLoaded() {
         r2Activity?.onPageLoaded()
@@ -428,6 +471,21 @@ class EpubNavigatorFragment private constructor(
     private val currentFragment: R2EpubPageFragment? get() =
         r2PagerAdapter.mFragments.get(r2PagerAdapter.getItemId(resourcePager.currentItem)) as? R2EpubPageFragment
 
+    /**
+     * Returns the reflowable page fragment matching the given href, if it is already loaded in the
+     * view pager.
+     */
+    private fun loadedFragmentForHref(href: String): R2EpubPageFragment? {
+        r2PagerAdapter.mFragments.forEach { _, fragment ->
+            val pageFragment = fragment as? R2EpubPageFragment ?: return@forEach
+            val link = pageFragment.link ?: return@forEach
+            if (link.href == href) {
+                return pageFragment
+            }
+        }
+        return null
+    }
+
     override val readingProgression: ReadingProgression
         get() = publication.metadata.effectiveReadingProgression
 
@@ -492,7 +550,7 @@ class EpubNavigatorFragment private constructor(
             paginationListener: PaginationListener? = null,
             decorationStyles: HtmlDecorationTemplates = HtmlDecorationTemplate.defaultStyles(),
         ): FragmentFactory =
-            createFragmentFactory { EpubNavigatorFragment(publication, baseUrl, initialLocator, decorationStyles, listener, paginationListener) }
+            createFragmentFactory { EpubNavigatorFragment(publication, baseUrl, initialLocator, listener, paginationListener, decorationStyles) }
 
     }
 

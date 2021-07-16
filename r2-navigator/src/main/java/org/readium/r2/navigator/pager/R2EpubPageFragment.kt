@@ -46,7 +46,7 @@ class R2EpubPageFragment : Fragment() {
     private val resourceUrl: String?
         get() = requireArguments().getString("url")
 
-    private val link: Link?
+    internal val link: Link?
         get() = requireArguments().getParcelable("link")
 
     var webView: R2WebView? = null
@@ -124,6 +124,8 @@ class R2EpubPageFragment : Fragment() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+
+                webView.listener.onResourceLoaded(link, webView, url)
 
                 val epubNavigator = (webView.navigator as? EpubNavigatorFragment)
                 val currentFragment: R2EpubPageFragment? =

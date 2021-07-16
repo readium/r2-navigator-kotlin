@@ -9,6 +9,8 @@ package org.readium.r2.navigator
 import android.os.Bundle
 import android.os.Parcelable
 import androidx.annotation.ColorInt
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListUpdateCallback
 import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 import org.readium.r2.shared.JSONable
@@ -28,7 +30,7 @@ interface DecorableNavigator {
      * Name each decoration group as you see fit. A good practice is to use the name of the feature
      * requiring decorations, e.g. annotation, search, tts, etc.
      */
-    fun applyDecorations(decorations: List<Decoration>, group: String)
+    suspend fun applyDecorations(decorations: List<Decoration>, group: String)
 
     /**
      * Indicates whether the Navigator supports the given decoration [style] class.
@@ -82,3 +84,61 @@ data class Decoration(
 
 /** Unique identifier for a decoration. */
 typealias DecorationId = String
+
+/** Represents an atomic change in a list of [Decoration] objects. */
+sealed class DecorationChange {
+    data class Added(val decoration: Decoration) : DecorationChange()
+    data class Updated(val decoration: Decoration) : DecorationChange()
+    data class Moved(val id: DecorationId, val fromPosition: Int, val toPosition: Int) : DecorationChange()
+    data class Removed(val id: DecorationId) : DecorationChange()
+}
+
+/**
+ * Lists the atomic changes between the receiver list and the [target] list of [Decoration] objects.
+ *
+ * The changes need to be applied in the same order, one by one.
+ */
+fun List<Decoration>.changesByHref(target: List<Decoration>): Map<String, List<DecorationChange>> {
+    val source = this
+    val result = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+        override fun getOldListSize(): Int = source.size
+        override fun getNewListSize(): Int = target.size
+
+        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
+            source[oldItemPosition].id == target[newItemPosition].id
+
+        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
+            source[oldItemPosition] == target[newItemPosition]
+    })
+
+    val changes = mutableMapOf<String, List<DecorationChange>>()
+
+    fun registerChange(change: DecorationChange, locator: Locator) {
+        val resourceChanges = changes[locator.href] ?: emptyList()
+        changes[locator.href] = resourceChanges + change
+    }
+
+    result.dispatchUpdatesTo(object : ListUpdateCallback {
+        override fun onInserted(position: Int, count: Int) {
+            val decoration = target[position]
+            registerChange(DecorationChange.Added(decoration), decoration.locator)
+        }
+
+        override fun onRemoved(position: Int, count: Int) {
+            val decoration = source[position]
+            registerChange(DecorationChange.Removed(decoration.id), decoration.locator)
+        }
+
+        override fun onMoved(fromPosition: Int, toPosition: Int) {
+            val decoration = target[toPosition]
+            registerChange(DecorationChange.Moved(decoration.id, fromPosition = fromPosition, toPosition = toPosition), decoration.locator)
+        }
+
+        override fun onChanged(position: Int, count: Int, payload: Any?) {
+            val decoration = target[position]
+            registerChange(DecorationChange.Updated(decoration), decoration.locator)
+        }
+    })
+
+    return changes
+}
