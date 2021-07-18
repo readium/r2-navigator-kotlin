@@ -72,9 +72,9 @@ data class Decoration(
      */
     interface Style : Parcelable {
         @Parcelize
-        class Highlight(@ColorInt val tint: Int? = null) : Style
+        data class Highlight(@ColorInt val tint: Int? = null) : Style
         @Parcelize
-        class Underline(@ColorInt val tint: Int? = null) : Style
+        data class Underline(@ColorInt val tint: Int? = null) : Style
     }
 
     override fun toJSON() = JSONObject().apply {
@@ -109,8 +109,13 @@ suspend fun List<Decoration>.changesByHref(target: List<Decoration>): Map<String
         override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
             source[oldItemPosition].id == target[newItemPosition].id
 
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
-            source[oldItemPosition] == target[newItemPosition]
+        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            val sourceDecoration = source[oldItemPosition]
+            val targetDecoration = target[newItemPosition]
+            return sourceDecoration.id == targetDecoration.id
+                && sourceDecoration.locator == targetDecoration.locator
+                && sourceDecoration.style == targetDecoration.style
+        }
     })
 
     val changes = mutableMapOf<String, List<DecorationChange>>()
@@ -122,13 +127,17 @@ suspend fun List<Decoration>.changesByHref(target: List<Decoration>): Map<String
 
     result.dispatchUpdatesTo(object : ListUpdateCallback {
         override fun onInserted(position: Int, count: Int) {
-            val decoration = target[position]
-            registerChange(DecorationChange.Added(decoration), decoration.locator)
+            for (i in 0 until count) {
+                val decoration = target[position + i]
+                registerChange(DecorationChange.Added(decoration), decoration.locator)
+            }
         }
 
         override fun onRemoved(position: Int, count: Int) {
-            val decoration = source[position]
-            registerChange(DecorationChange.Removed(decoration.id), decoration.locator)
+            for (i in 0 until count) {
+                val decoration = source[position + i]
+                registerChange(DecorationChange.Removed(decoration.id), decoration.locator)
+            }
         }
 
         override fun onMoved(fromPosition: Int, toPosition: Int) {
@@ -137,8 +146,10 @@ suspend fun List<Decoration>.changesByHref(target: List<Decoration>): Map<String
         }
 
         override fun onChanged(position: Int, count: Int, payload: Any?) {
-            val decoration = target[position]
-            registerChange(DecorationChange.Updated(decoration), decoration.locator)
+            for (i in 0 until count) {
+                val decoration = target[position + i]
+                registerChange(DecorationChange.Updated(decoration), decoration.locator)
+            }
         }
     })
 
