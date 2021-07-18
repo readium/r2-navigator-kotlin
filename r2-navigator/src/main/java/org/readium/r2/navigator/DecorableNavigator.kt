@@ -11,6 +11,8 @@ import android.os.Parcelable
 import androidx.annotation.ColorInt
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListUpdateCallback
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 import org.readium.r2.shared.JSONable
@@ -98,8 +100,8 @@ sealed class DecorationChange {
  *
  * The changes need to be applied in the same order, one by one.
  */
-fun List<Decoration>.changesByHref(target: List<Decoration>): Map<String, List<DecorationChange>> {
-    val source = this
+suspend fun List<Decoration>.changesByHref(target: List<Decoration>): Map<String, List<DecorationChange>> = withContext(Dispatchers.IO) {
+    val source = this@changesByHref
     val result = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
         override fun getOldListSize(): Int = source.size
         override fun getNewListSize(): Int = target.size
@@ -140,5 +142,5 @@ fun List<Decoration>.changesByHref(target: List<Decoration>): Map<String, List<D
         }
     })
 
-    return changes
+    changes
 }

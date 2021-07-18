@@ -15,10 +15,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.collection.forEach
-import androidx.core.view.get
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentFactory
+import androidx.fragment.app.viewModels
 import androidx.viewpager.widget.ViewPager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONObject
 import org.readium.r2.navigator.*
 import org.readium.r2.navigator.databinding.ActivityR2ViewpagerBinding
-import org.readium.r2.navigator.epub.extensions.javascriptForGroup
+import org.readium.r2.navigator.epub.EpubNavigatorViewModel.RunScriptCommand
 import org.readium.r2.navigator.extensions.htmlId
 import org.readium.r2.navigator.extensions.positionsByResource
 import org.readium.r2.navigator.extensions.withBaseUrl
@@ -46,7 +46,6 @@ import org.readium.r2.shared.publication.epub.EpubLayout
 import org.readium.r2.shared.publication.presentation.presentation
 import org.readium.r2.shared.publication.services.isRestricted
 import org.readium.r2.shared.publication.services.positions
-import timber.log.Timber
 import kotlin.math.ceil
 import kotlin.reflect.KClass
 
@@ -76,6 +75,10 @@ class EpubNavigatorFragment private constructor(
         require(!publication.isRestricted) { "The provided publication is restricted. Check that any DRM was properly unlocked using a Content Protection."}
     }
 
+    private val viewModel: EpubNavigatorViewModel by viewModels {
+        EpubNavigatorViewModel.createFactory(decorationStyles)
+    }
+
     // Make a copy to prevent new decoration styles from being registered after initializing the
     // navigator.
     private val decorationStyles = decorationStyles.copy()
@@ -100,7 +103,7 @@ class EpubNavigatorFragment private constructor(
     private var _binding: ActivityR2ViewpagerBinding? = null
     private val binding get() = _binding!!
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         currentActivity = requireActivity()
         _binding = ActivityR2ViewpagerBinding.inflate(inflater, container, false)
         val view = binding.root
@@ -294,6 +297,32 @@ class EpubNavigatorFragment private constructor(
         return go(link.toLocator(), animated, completion)
     }
 
+    private fun run(commands: List<RunScriptCommand>) {
+        commands.forEach { run(it) }
+    }
+
+    private fun run(command: RunScriptCommand) {
+        when (command.scope) {
+            RunScriptCommand.Scope.CurrentResource -> {
+                currentFragment?.webView
+                    ?.runJavaScript(command.script)
+            }
+            RunScriptCommand.Scope.LoadedResources -> {
+                r2PagerAdapter.mFragments.forEach { _, fragment ->
+                    (fragment as? R2EpubPageFragment)?.webView
+                        ?.runJavaScript(command.script)
+                }
+            }
+            is RunScriptCommand.Scope.Resource -> {
+                loadedFragmentForHref(command.scope.href)?.webView
+                    ?.runJavaScript(command.script)
+            }
+            is RunScriptCommand.Scope.WebView -> {
+                command.scope.webView.runJavaScript(command.script)
+            }
+        }
+    }
+
     // SelectableNavigator
 
     override suspend fun currentSelection(): Selection? {
@@ -324,43 +353,22 @@ class EpubNavigatorFragment private constructor(
     }
 
     override fun clearSelection() {
-        currentFragment?.webView?.runJavaScript("window.getSelection().removeAllRanges();")
+        run(viewModel.clearSelection())
     }
 
     // DecorableNavigator
 
-    /** Current decorations, indexed by the group name. */
-    private val decorations = mutableMapOf<String, List<Decoration>>()
-
     override fun <T : Decoration.Style> supportsDecorationStyle(style: KClass<T>): Boolean =
-        decorationStyles.styles.containsKey(style)
+        viewModel.supportsDecorationStyle(style)
 
     override suspend fun applyDecorations(decorations: List<Decoration>, group: String) {
-        val source = this.decorations[group] ?: emptyList()
-        val target = decorations.toList()
-        this.decorations[group] = target
-
-        if (target.isEmpty()) {
-            r2PagerAdapter.mFragments.forEach { _, fragment ->
-                (fragment as? R2EpubPageFragment)?.webView
-                    ?.runJavaScript("readium.getDecorations('$group').clear();")
-            }
-
-        } else {
-            for ((href, changes) in source.changesByHref(target)) {
-                val webView = loadedFragmentForHref(href)?.webView ?: continue
-                val script = changes.javascriptForGroup(group, decorationStyles) ?: continue
-                webView.runJavaScript(script)
-            }
-        }
+        run(viewModel.applyDecorations(decorations, group))
     }
 
     // R2BasicWebView.Listener
 
     override fun onResourceLoaded(link: Link?, webView: R2BasicWebView, url: String?) {
-        val styles = decorationStyles.toJSON().toString()
-            .replace("\\n", " ")
-        webView.runJavaScript("readium.registerDecorationStyles($styles);")
+        run(viewModel.onResourceLoaded(link, webView))
     }
 
     override fun onPageLoaded() {
