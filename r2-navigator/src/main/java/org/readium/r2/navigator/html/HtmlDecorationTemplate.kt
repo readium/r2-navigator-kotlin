@@ -70,7 +70,6 @@ data class HtmlDecorationTemplate(
     }
 
     private data class Padding(val left: Int = 0, val top: Int = 0, val right: Int = 0, val bottom: Int = 0)
-    private enum class UnderlineAnchor { BASELINE, BOX; }
 
     override fun toJSON() = JSONObject().apply {
         put("layout", layout.value)
@@ -104,7 +103,7 @@ data class HtmlDecorationTemplate(
                     val style = decoration.style as? Style.Highlight
                     val tint = style?.tint ?: defaultTint
                     """
-                    <div class="$className" style="background-color: ${colorToCss(tint, includeAlpha = false)}"/>"
+                    <div class="$className" style="background-color: ${tint.toCss(includeAlpha = false)}"/>"
                     """
                 },
                 stylesheet = """
@@ -122,46 +121,26 @@ data class HtmlDecorationTemplate(
 
         /** Creates a new decoration template for the underline style. */
         fun underline(@ColorInt defaultTint: Int, lineWeight: Int, cornerRadius: Int): HtmlDecorationTemplate {
-            val anchor: UnderlineAnchor = UnderlineAnchor.BASELINE
             val className = createUniqueClassName("underline")
-            return when (anchor) {
-                UnderlineAnchor.BASELINE -> HtmlDecorationTemplate(
-                    layout = Layout.BOXES,
-                    element = { decoration ->
-                        val style = decoration.style as? Style.Underline
-                        val tint = style?.tint ?: defaultTint
-                        """
-                        <div><span class="$className" style="background-color: ${colorToCss(tint, includeAlpha = true)}"/></div>"
-                        """
-                    },
-                    stylesheet = """
-                        .$className {
-                            display: inline-block;
-                            width: 100%;
-                            height: ${lineWeight}px;
-                            border-radius: ${cornerRadius}px;
-                            vertical-align: sub;
-                        }
-                        """
-                )
-                UnderlineAnchor.BOX -> HtmlDecorationTemplate(
-                    layout = Layout.BOXES,
-                    element = { decoration ->
-                        val style = decoration.style as? Style.Underline
-                        val tint = style?.tint ?: defaultTint
-                        """
-                        <div class="$className" style="--tint: ${colorToCss(tint, includeAlpha = true)}"/>"
-                        """
-                    },
-                    stylesheet = """
-                        .$className {
-                            box-sizing: border-box;
-                            border-radius: ${cornerRadius}px;
-                            border-bottom: ${lineWeight}px solid var(--tint);
-                        }
-                        """
-                )
-            }
+            return HtmlDecorationTemplate(
+                layout = Layout.BOXES,
+                element = { decoration ->
+                    val style = decoration.style as? Style.Underline
+                    val tint = style?.tint ?: defaultTint
+                    """
+                    <div><span class="$className" style="background-color: ${tint.toCss(includeAlpha = true)}"/></div>"
+                    """
+                },
+                stylesheet = """
+                    .$className {
+                        display: inline-block;
+                        width: 100%;
+                        height: ${lineWeight}px;
+                        border-radius: ${cornerRadius}px;
+                        vertical-align: text-bottom;
+                    }
+                    """
+            )
         }
 
         private var classNamesId = 0;
@@ -195,12 +174,17 @@ class HtmlDecorationTemplates private constructor(
     }
 }
 
-private fun colorToCss(@ColorInt color: Int, includeAlpha: Boolean): String {
-    val red = Color.red(color)
-    val green = Color.green(color)
-    val blue = Color.blue(color)
+/**
+ * Converts the receiver color int to a CSS expression.
+ *
+ * @param includeAlpha When true, will output a rgba() expression. Otherwise, the opacity is 100%.
+ */
+fun @receiver:ColorInt Int.toCss(includeAlpha: Boolean = true): String {
+    val red = Color.red(this)
+    val green = Color.green(this)
+    val blue = Color.blue(this)
     return if (includeAlpha) {
-        val alpha = Color.alpha(color).toDouble() / 255
+        val alpha = Color.alpha(this).toDouble() / 255
         "rgba($red, $green, $blue, $alpha)"
     } else {
         "rgb($red, $green, $blue)"
