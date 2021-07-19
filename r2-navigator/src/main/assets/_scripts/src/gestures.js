@@ -4,6 +4,8 @@
  * available in the top-level LICENSE file of the project.
  */
 
+import { handleDecorationClickEvent } from "./decorator";
+
 window.addEventListener("DOMContentLoaded", function (event) {
   document.addEventListener("click", onClick, false);
 });
@@ -11,6 +13,10 @@ window.addEventListener("DOMContentLoaded", function (event) {
 function onClick(event) {
   if (!window.getSelection().isCollapsed) {
     // There's an on-going selection, the tap will dismiss it so we don't forward it.
+    return;
+  }
+
+  if (handleDecorationClickEvent(event)) {
     return;
   }
 

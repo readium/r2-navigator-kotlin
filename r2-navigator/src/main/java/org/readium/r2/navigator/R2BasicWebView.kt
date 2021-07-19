@@ -12,6 +12,7 @@ package org.readium.r2.navigator
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.PointF
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import android.text.Html
@@ -33,7 +34,9 @@ import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.safety.Whitelist
+import org.readium.r2.navigator.extensions.optRectF
 import org.readium.r2.shared.extensions.optNullableString
+import org.readium.r2.shared.extensions.tryOrLog
 import org.readium.r2.shared.extensions.tryOrNull
 import org.readium.r2.shared.publication.*
 import org.readium.r2.shared.util.Href
@@ -228,6 +231,23 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
             else ->
                 runBlocking(uiScope.coroutineContext) { listener.onTap(PointF(event.clientX.toFloat(), event.clientY.toFloat())) }
         }
+    }
+
+    /**
+     * Called from the JS code when a tap on a decoration is detected.
+     */
+    @android.webkit.JavascriptInterface
+    fun onDecorationActivated(eventJson: String): Boolean {
+        val obj = tryOrLog { JSONObject(eventJson) }
+        val id = obj?.optNullableString("id")
+        val group = obj?.optNullableString("group")
+        val rect = obj?.optRectF("rect")
+        if (id == null || group == null || rect == null) {
+            Timber.e("Invalid JSON for onDecorationActivated: $eventJson")
+            return false
+        }
+
+        return listener.onDecorationActivated(id, group, rect)
     }
 
     /** Produced by gestures.js */
@@ -470,6 +490,7 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
         fun onPageEnded(end: Boolean)
         fun onScroll()
         fun onTap(point: PointF): Boolean
+        fun onDecorationActivated(id: DecorationId, group: String, rect: RectF): Boolean = false
         fun onProgressionChanged()
         fun onHighlightActivated(id: String)
         fun onHighlightAnnotationMarkActivated(id: String)

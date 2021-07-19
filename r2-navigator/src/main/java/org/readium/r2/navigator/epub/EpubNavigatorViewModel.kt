@@ -6,11 +6,9 @@
 
 package org.readium.r2.navigator.epub
 
+import android.graphics.RectF
 import androidx.lifecycle.ViewModel
-import org.readium.r2.navigator.Decoration
-import org.readium.r2.navigator.DecorationChange
-import org.readium.r2.navigator.R2BasicWebView
-import org.readium.r2.navigator.changesByHref
+import org.readium.r2.navigator.*
 import org.readium.r2.navigator.epub.extensions.javascriptForGroup
 import org.readium.r2.navigator.html.HtmlDecorationTemplates
 import org.readium.r2.navigator.util.createViewModelFactory
@@ -65,7 +63,7 @@ internal class EpubNavigatorViewModel(
     // Decorations
 
     /** Current decorations, indexed by the group name. */
-    val decorations: MutableMap<String, List<Decoration>> = mutableMapOf()
+    private val decorations: MutableMap<String, List<Decoration>> = mutableMapOf()
 
     fun <T : Decoration.Style> supportsDecorationStyle(style: KClass<T>): Boolean =
         decorationTemplates.styles.containsKey(style)
@@ -90,6 +88,30 @@ internal class EpubNavigatorViewModel(
         }
 
         return cmds
+    }
+
+    /** Decoration group listeners, indexed by the group name. */
+    private val decorationListeners: MutableMap<String, List<DecorableNavigator.OnActivatedListener>> = mutableMapOf()
+
+    fun addDecorationListener(group: String, listener: DecorableNavigator.OnActivatedListener?) {
+        listener ?: return
+        val listeners = decorationListeners[group] ?: emptyList()
+        decorationListeners[group] = listeners + listener
+    }
+
+    fun onDecorationActivated(id: DecorationId, group: String, rect: RectF): Boolean {
+        val listeners = decorationListeners[group]
+            ?.takeIf { it.isNotEmpty() }
+            ?: return false
+
+        val decoration = decorations[group]
+            ?.firstOrNull { it.id == id }
+            ?: return false
+
+        for (listener in listeners) {
+            listener.onDecorationActivated(decoration, group, rect)
+        }
+        return true
     }
 
     companion object {

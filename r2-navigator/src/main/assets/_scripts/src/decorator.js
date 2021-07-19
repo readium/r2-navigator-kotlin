@@ -4,7 +4,11 @@
 //  available in the top-level LICENSE file of the project.
 //
 
-import { getClientRectsNoOverlap, rectContainsPoint } from "./rect";
+import {
+  getClientRectsNoOverlap,
+  rectContainsPoint,
+  toNativeRect,
+} from "./rect";
 import { log, logError, rangeFromLocator } from "./utils";
 
 let styles = new Map();
@@ -47,10 +51,12 @@ export function handleDecorationClickEvent(event) {
   function findTarget() {
     for (const [group, groupContent] of groups) {
       for (const item of groupContent.items) {
-        for (const element of item.clickableElements) {
-          let rect = element.getBoundingClientRect().toJSON();
-          if (rectContainsPoint(rect, event.clientX, event.clientY, 1)) {
-            return { group, item, element, rect };
+        if (item.clickableElements != null) {
+          for (const element of item.clickableElements) {
+            let rect = element.getBoundingClientRect().toJSON();
+            if (rectContainsPoint(rect, event.clientX, event.clientY, 1)) {
+              return { group, item, element, rect };
+            }
           }
         }
       }
@@ -61,11 +67,14 @@ export function handleDecorationClickEvent(event) {
   if (!target) {
     return false;
   }
-  //  webkit.messageHandlers.decorationActivated.postMessage({
-  //    id: target.item.decoration.id,
-  //    group: target.group,
-  //  });
-  return true;
+
+  return Android.onDecorationActivated(
+    JSON.stringify({
+      id: target.item.decoration.id,
+      group: target.group,
+      rect: toNativeRect(target.item.range.getBoundingClientRect()),
+    })
+  );
 }
 
 export function DecorationGroup(groupId) {
@@ -216,9 +225,12 @@ export function DecorationGroup(groupId) {
 
     groupContainer.append(itemContainer);
     item.container = itemContainer;
-    item.clickableElements = itemContainer.querySelectorAll(
-      "[data-activable='1']"
+    item.clickableElements = Array.from(
+      itemContainer.querySelectorAll("[data-activable='1']")
     );
+    if (item.clickableElements.length == 0) {
+      item.clickableElements = Array.from(itemContainer.children);
+    }
   }
 
   function requireContainer() {

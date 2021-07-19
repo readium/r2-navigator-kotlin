@@ -6,6 +6,7 @@
 
 package org.readium.r2.navigator
 
+import android.graphics.RectF
 import android.os.Bundle
 import android.os.Parcelable
 import androidx.annotation.ColorInt
@@ -23,7 +24,6 @@ import kotlin.reflect.KClass
  * A navigator able to render arbitrary decorations over a publication.
  */
 interface DecorableNavigator {
-
     /**
      * Declares the current state of the decorations in the given decoration [group].
      *
@@ -42,6 +42,25 @@ interface DecorableNavigator {
      * sense, so an Audiobook Navigator would not support the `underline` decoration style.
      */
     fun <T: Decoration.Style> supportsDecorationStyle(style: KClass<T>): Boolean
+
+    /**
+     * Registers new listeners for decoration interactions in the given [group].
+     *
+     * @param onActivated Called when the user activates the decoration, e.g. with a click or tap.
+     */
+    fun addDecorationListener(group: String, onActivated: OnActivatedListener? = null)
+
+    fun interface OnActivatedListener {
+        /**
+         * Called when the user activates the [decoration], e.g. with a click or tap.
+         *
+         * @param decoration Activated decoration.
+         * @param group Name of the group the decoration belongs to.
+         * @param rect Frame of the bounding rect for the decoration, in the coordinate of the
+         *        navigator view. This is only useful in the context of a VisualNavigator.
+         */
+        fun onDecorationActivated(decoration: Decoration, group: String, rect: RectF?)
+    }
 }
 
 /**

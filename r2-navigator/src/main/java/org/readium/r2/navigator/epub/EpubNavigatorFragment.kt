@@ -28,6 +28,7 @@ import org.readium.r2.navigator.*
 import org.readium.r2.navigator.databinding.ActivityR2ViewpagerBinding
 import org.readium.r2.navigator.epub.EpubNavigatorViewModel.RunScriptCommand
 import org.readium.r2.navigator.extensions.htmlId
+import org.readium.r2.navigator.extensions.optRectF
 import org.readium.r2.navigator.extensions.positionsByResource
 import org.readium.r2.navigator.extensions.withBaseUrl
 import org.readium.r2.navigator.html.HtmlDecorationTemplate
@@ -341,14 +342,7 @@ class EpubNavigatorFragment private constructor(
             ?.let { Locator.fromJSON(it) }
             ?: return null
 
-        val rect = resultJSON.optJSONObject("rect")?.let { rectJSON ->
-            val left = rectJSON.optDouble("left").toFloat()
-            val top = rectJSON.optDouble("top").toFloat()
-            val right = rectJSON.optDouble("right").toFloat()
-            val bottom = rectJSON.optDouble("bottom").toFloat()
-            RectF(left, top, right, bottom)
-        }
-
+        val rect = resultJSON.optRectF("rect")
         return Selection(locator, rect)
     }
 
@@ -360,6 +354,10 @@ class EpubNavigatorFragment private constructor(
 
     override fun <T : Decoration.Style> supportsDecorationStyle(style: KClass<T>): Boolean =
         viewModel.supportsDecorationStyle(style)
+
+    override fun addDecorationListener(group: String, onActivated: DecorableNavigator.OnActivatedListener?) {
+        viewModel.addDecorationListener(group, onActivated)
+    }
 
     override suspend fun applyDecorations(decorations: List<Decoration>, group: String) {
         run(viewModel.applyDecorations(decorations, group))
@@ -416,6 +414,9 @@ class EpubNavigatorFragment private constructor(
     override fun onTap(point: PointF): Boolean {
         return this.listener?.onTap(point) ?: false
     }
+
+    override fun onDecorationActivated(id: DecorationId, group: String, rect: RectF): Boolean =
+        viewModel.onDecorationActivated(id, group, rect)
 
     override fun onProgressionChanged() {
         notifyCurrentLocation()

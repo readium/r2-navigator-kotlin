@@ -24,10 +24,12 @@ import kotlin.reflect.KClass
  *        matching DOM range.
  * @param width Indicates how the width of each created HTML element expands in the viewport.
  * @param element Closure used to generate a new HTML element for the given [Decoration]. Several
- *        elements will be created for a single decoration when using the [BOXES] layout.
+ *        elements will be created for a single decoration when using the BOXES layout.
  *        The Navigator will automatically position the created elements according to the
  *        decoration's Locator. The template is only responsible for the look and feel of the
  *        generated elements.
+ *        Every child elements with a `data-activable="1"` HTML attribute will handle tap events.
+ *        If no element has this attribute, the root element will handle taps.
  * @param stylesheet A CSS stylesheet which will be injected in the resource, which can be
  *        referenced by the created elements. Make sure to use unique identifiers for your classes
  *        and IDs to avoid conflicts with the HTML resource itself. Best practice is to prefix with

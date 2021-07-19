@@ -5,6 +5,7 @@
 //
 
 import { log as logNative, logError } from "./utils";
+import { toNativeRect } from "./rect";
 import { TextRange } from "./vendor/hypothesis/anchoring/text-range";
 
 const debug = true;
@@ -26,15 +27,7 @@ function getSelectionRect() {
     }
     let range = sel.getRangeAt(0);
 
-    const pixelRatio = window.devicePixelRatio;
-    const rect = range.getBoundingClientRect();
-    const width = rect.width * pixelRatio;
-    const height = rect.height * pixelRatio;
-    const left = rect.left * pixelRatio;
-    const top = rect.top * pixelRatio;
-    const right = left + width;
-    const bottom = top + height;
-    return { width, height, left, top, right, bottom };
+    return toNativeRect(range.getBoundingClientRect());
   } catch (e) {
     logError(e);
     return null;
