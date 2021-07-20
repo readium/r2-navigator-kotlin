@@ -23,7 +23,7 @@ import kotlin.reflect.KClass
 /**
  * A navigator able to render arbitrary decorations over a publication.
  */
-interface DecorableNavigator {
+interface DecorableNavigator : Navigator {
     /**
      * Declares the current state of the decorations in the given decoration [group].
      *
@@ -91,9 +91,9 @@ data class Decoration(
      */
     interface Style : Parcelable {
         @Parcelize
-        data class Highlight(@ColorInt val tint: Int? = null) : Style
+        data class Highlight(@ColorInt val tint: Int? = null, val isActive: Boolean = false) : Style
         @Parcelize
-        data class Underline(@ColorInt val tint: Int? = null) : Style
+        data class Underline(@ColorInt val tint: Int? = null, val isActive: Boolean = false) : Style
     }
 
     override fun toJSON() = JSONObject().apply {

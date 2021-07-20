@@ -102,8 +102,12 @@ data class HtmlDecorationTemplate(
                 element = { decoration ->
                     val style = decoration.style as? Style.Highlight
                     val tint = style?.tint ?: defaultTint
+                    var extraStyle = ""
+                    if (style?.isActive == true) {
+                        extraStyle += " border-bottom: 2px solid ${tint.toCss()}"
+                    }
                     """
-                    <div class="$className" style="background-color: ${tint.toCss(includeAlpha = false)}"/>"
+                    <div class="$className" style="background-color: ${tint.toCss(alpha = alpha)} !important; $extraStyle"/>"
                     """
                 },
                 stylesheet = """
@@ -113,7 +117,7 @@ data class HtmlDecorationTemplate(
                         margin-top: ${-padding.top}px;
                         padding-bottom: ${padding.top + padding.bottom}px;
                         border-radius: ${cornerRadius}px;
-                        opacity: ${alpha};
+                        box-sizing: border-box;
                     }
                     """
             )
@@ -128,7 +132,7 @@ data class HtmlDecorationTemplate(
                     val style = decoration.style as? Style.Underline
                     val tint = style?.tint ?: defaultTint
                     """
-                    <div><span class="$className" style="background-color: ${tint.toCss(includeAlpha = true)}"/></div>"
+                    <div><span class="$className" style="background-color: ${tint.toCss()} !important"/></div>"
                     """
                 },
                 stylesheet = """
@@ -177,16 +181,12 @@ class HtmlDecorationTemplates private constructor(
 /**
  * Converts the receiver color int to a CSS expression.
  *
- * @param includeAlpha When true, will output a rgba() expression. Otherwise, the opacity is 100%.
+ * @param alpha When set, overrides the actual color alpha.
  */
-fun @receiver:ColorInt Int.toCss(includeAlpha: Boolean = true): String {
-    val red = Color.red(this)
-    val green = Color.green(this)
-    val blue = Color.blue(this)
-    return if (includeAlpha) {
-        val alpha = Color.alpha(this).toDouble() / 255
-        "rgba($red, $green, $blue, $alpha)"
-    } else {
-        "rgb($red, $green, $blue)"
-    }
+fun @receiver:ColorInt Int.toCss(alpha: Double? = null): String {
+    val r = Color.red(this)
+    val g = Color.green(this)
+    val b = Color.blue(this)
+    val a = alpha ?: Color.alpha(this).toDouble() / 255
+    return "rgba($r, $g, $b, $a)"
 }
