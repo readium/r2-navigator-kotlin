@@ -330,24 +330,19 @@ class EpubNavigatorFragment private constructor(
     // SelectableNavigator
 
     override suspend fun currentSelection(): Selection? {
-        val index = resourcePager.currentItem
-        val adapter = r2PagerAdapter ?: return null
-        val webView = (adapter.mFragments.get(adapter.getItemId(index)) as? R2EpubPageFragment)?.webView
-            ?: return null
-        val link = publication.readingOrder[index]
+        val webView = currentFragment?.webView ?: return null
+        val json =
+            webView.runJavaScriptSuspend("readium.getCurrentSelection();")
+                .takeIf { it != "null"}
+                ?.let { tryOrLog { JSONObject(it) } }
+                ?: return null
 
-        val result = webView.runJavaScriptSuspend("""(function(){
-                readium.link = ${link.toJSON()};
-                return readium.getCurrentSelection();
-            })()""")
-        val resultJSON = tryOrLog { JSONObject(result) } ?: return null
-
-        val locator = resultJSON.optJSONObject("locator")
-            ?.let { Locator.fromJSON(it) }
-            ?: return null
-
-        val rect = resultJSON.optRectF("rect")
-        return Selection(locator, rect)
+        return Selection(
+            locator = currentLocator.value.copy(
+                text = Locator.Text.fromJSON(json.optJSONObject("text"))
+            ),
+            rect = json.optRectF("rect")
+        )
     }
 
     override fun clearSelection() {
