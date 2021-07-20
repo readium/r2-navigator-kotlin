@@ -90,7 +90,7 @@ class EpubNavigatorFragment private constructor(
     private lateinit var resourcesSingle: List<PageResource>
     private lateinit var resourcesDouble: List<PageResource>
 
-    internal lateinit var preferences: SharedPreferences
+    lateinit var preferences: SharedPreferences
     internal lateinit var publicationIdentifier: String
 
     internal var currentPagerPosition: Int = 0
@@ -104,12 +104,15 @@ class EpubNavigatorFragment private constructor(
     private var _binding: ActivityR2ViewpagerBinding? = null
     private val binding get() = _binding!!
 
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        preferences = context.getSharedPreferences("org.readium.r2.settings", Context.MODE_PRIVATE)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         currentActivity = requireActivity()
         _binding = ActivityR2ViewpagerBinding.inflate(inflater, container, false)
         val view = binding.root
-
-        preferences = requireContext().getSharedPreferences("org.readium.r2.settings", Context.MODE_PRIVATE)
 
         positions = runBlocking { publication.positions() }
         publicationIdentifier = publication.metadata.identifier ?: publication.metadata.title
@@ -309,7 +312,7 @@ class EpubNavigatorFragment private constructor(
                     ?.runJavaScript(command.script)
             }
             RunScriptCommand.Scope.LoadedResources -> {
-                r2PagerAdapter.mFragments.forEach { _, fragment ->
+                r2PagerAdapter?.mFragments?.forEach { _, fragment ->
                     (fragment as? R2EpubPageFragment)?.webView
                         ?.runJavaScript(command.script)
                 }
@@ -328,7 +331,8 @@ class EpubNavigatorFragment private constructor(
 
     override suspend fun currentSelection(): Selection? {
         val index = resourcePager.currentItem
-        val webView = (r2PagerAdapter.mFragments.get(r2PagerAdapter.getItemId(index)) as? R2EpubPageFragment)?.webView
+        val adapter = r2PagerAdapter ?: return null
+        val webView = (adapter.mFragments.get(adapter.getItemId(index)) as? R2EpubPageFragment)?.webView
             ?: return null
         val link = publication.readingOrder[index]
 
@@ -474,18 +478,22 @@ class EpubNavigatorFragment private constructor(
         return true
     }
 
-    private val r2PagerAdapter: R2PagerAdapter
-        get() = resourcePager.adapter as R2PagerAdapter
+    private val r2PagerAdapter: R2PagerAdapter?
+        get() = if (::resourcePager.isInitialized) resourcePager.adapter as? R2PagerAdapter
+            else null
 
     private val currentFragment: R2EpubPageFragment? get() =
-        r2PagerAdapter.mFragments.get(r2PagerAdapter.getItemId(resourcePager.currentItem)) as? R2EpubPageFragment
+        r2PagerAdapter?.let { adapter ->
+            adapter.mFragments.get(adapter.getItemId(resourcePager.currentItem)) as? R2EpubPageFragment
+        }
 
     /**
      * Returns the reflowable page fragment matching the given href, if it is already loaded in the
      * view pager.
      */
     private fun loadedFragmentForHref(href: String): R2EpubPageFragment? {
-        r2PagerAdapter.mFragments.forEach { _, fragment ->
+        val adapter = r2PagerAdapter ?: return null
+        adapter.mFragments.forEach { _, fragment ->
             val pageFragment = fragment as? R2EpubPageFragment ?: return@forEach
             val link = pageFragment.link ?: return@forEach
             if (link.href == href) {

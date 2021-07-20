@@ -28,15 +28,10 @@ internal class EpubNavigatorViewModel(
         }
     }
 
-    fun onResourceLoaded(link: Link?, webView: R2BasicWebView): List<RunScriptCommand> {
-        val cmds = mutableListOf<RunScriptCommand>()
-
+    fun onResourceLoaded(link: Link?, webView: R2BasicWebView): RunScriptCommand {
         val styles = decorationTemplates.toJSON().toString()
             .replace("\\n", " ")
-        cmds.add(RunScriptCommand(
-            "readium.registerDecorationStyles($styles);",
-            scope = RunScriptCommand.Scope.WebView(webView)
-        ))
+        var script = "readium.registerDecorationStyles($styles);\n"
 
         if (link != null) {
             for ((group, decorations) in decorations) {
@@ -44,12 +39,12 @@ internal class EpubNavigatorViewModel(
                     .filter { it.locator.href == link.href }
                     .map { DecorationChange.Added(it) }
 
-                val script = changes.javascriptForGroup(group, decorationTemplates) ?: continue
-                cmds.add(RunScriptCommand(script, scope = RunScriptCommand.Scope.WebView(webView)))
+                val groupScript = changes.javascriptForGroup(group, decorationTemplates) ?: continue
+                script += "$groupScript\n"
             }
         }
 
-        return cmds
+        return RunScriptCommand(script, scope = RunScriptCommand.Scope.WebView(webView))
     }
 
     // Selection
