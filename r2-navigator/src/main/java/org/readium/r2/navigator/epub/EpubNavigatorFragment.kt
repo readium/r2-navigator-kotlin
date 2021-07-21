@@ -62,8 +62,15 @@ class EpubNavigatorFragment private constructor(
     private val initialLocator: Locator?,
     internal val listener: Listener?,
     internal val paginationListener: PaginationListener?,
-    decorationTemplates: HtmlDecorationTemplates,
+    internal val config: Configuration,
 ): Fragment(), CoroutineScope by MainScope(), VisualNavigator, SelectableNavigator, DecorableNavigator, R2BasicWebView.Listener {
+
+    data class Configuration(
+        /**
+         * Supported HTML decoration templates.
+         */
+        val decorationTemplates: HtmlDecorationTemplates = HtmlDecorationTemplates.defaultTemplates()
+    )
 
     interface PaginationListener {
         fun onPageChanged(pageIndex: Int, totalPages: Int, locator: Locator) {}
@@ -79,7 +86,7 @@ class EpubNavigatorFragment private constructor(
     private val viewModel: EpubNavigatorViewModel by viewModels {
         // Make a copy to prevent new decoration templates from being registered after initializing
         // the navigator.
-        EpubNavigatorViewModel.createFactory(decorationTemplates.copy())
+        EpubNavigatorViewModel.createFactory(config.decorationTemplates.copy())
     }
 
     internal lateinit var positions: List<Locator>
@@ -550,7 +557,7 @@ class EpubNavigatorFragment private constructor(
          * @param initialLocator The first location which should be visible when rendering the
          *        publication. Can be used to restore the last reading location.
          * @param listener Optional listener to implement to observe events, such as user taps.
-         * @param decorationTemplates Supported HTML decoration templates.
+         * @param config Additional configuration.
          */
         fun createFactory(
             publication: Publication,
@@ -558,9 +565,9 @@ class EpubNavigatorFragment private constructor(
             initialLocator: Locator? = null,
             listener: Listener? = null,
             paginationListener: PaginationListener? = null,
-            decorationTemplates: HtmlDecorationTemplates = HtmlDecorationTemplate.defaultTemplates(),
+            config: Configuration = Configuration(),
         ): FragmentFactory =
-            createFragmentFactory { EpubNavigatorFragment(publication, baseUrl, initialLocator, listener, paginationListener, decorationTemplates) }
+            createFragmentFactory { EpubNavigatorFragment(publication, baseUrl, initialLocator, listener, paginationListener, config) }
 
     }
 

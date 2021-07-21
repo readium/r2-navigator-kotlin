@@ -81,20 +81,6 @@ data class HtmlDecorationTemplate(
 
     companion object {
 
-        /**
-         * Creates the default list of decoration styles with associated HTML templates.
-         */
-        fun defaultTemplates(
-            @ColorInt defaultTint: Int = Color.YELLOW,
-            lineWeight: Int = 2,
-            cornerRadius: Int = 3,
-            alpha: Double = 0.3
-        ) = HtmlDecorationTemplates {
-            set(Style.Highlight::class, highlight(defaultTint = defaultTint, lineWeight = lineWeight, cornerRadius = cornerRadius, alpha = alpha))
-            set(Style.Underline::class, underline(defaultTint = defaultTint, lineWeight = lineWeight, cornerRadius = cornerRadius, alpha = alpha))
-        }
-
-
         /** Creates a new decoration template for the highlight style. */
         fun highlight(@ColorInt defaultTint: Int, lineWeight: Int, cornerRadius: Int, alpha: Double): HtmlDecorationTemplate =
             createTemplate(asHighlight = true, defaultTint = defaultTint, lineWeight = lineWeight, cornerRadius = cornerRadius, alpha = alpha)
@@ -168,6 +154,20 @@ class HtmlDecorationTemplates private constructor(
     companion object {
         operator fun invoke(build: HtmlDecorationTemplates.() -> Unit): HtmlDecorationTemplates =
             HtmlDecorationTemplates().apply(build)
+
+        /**
+         * Creates the default list of decoration styles with associated HTML templates.
+         */
+        fun defaultTemplates(
+            @ColorInt defaultTint: Int = Color.YELLOW,
+            lineWeight: Int = 2,
+            cornerRadius: Int = 3,
+            alpha: Double = 0.3
+        ) = HtmlDecorationTemplates {
+            set(Style.Highlight::class, HtmlDecorationTemplate.highlight(defaultTint = defaultTint, lineWeight = lineWeight, cornerRadius = cornerRadius, alpha = alpha))
+            set(Style.Underline::class, HtmlDecorationTemplate.underline(defaultTint = defaultTint, lineWeight = lineWeight, cornerRadius = cornerRadius, alpha = alpha))
+        }
+
     }
 }
 
