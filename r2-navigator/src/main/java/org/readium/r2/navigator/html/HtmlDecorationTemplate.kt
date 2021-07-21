@@ -82,7 +82,7 @@ data class HtmlDecorationTemplate(
         /**
          * Creates the default list of decoration styles with associated HTML templates.
          */
-        fun defaultStyles(
+        fun defaultTemplates(
             @ColorInt defaultTint: Int = Color.YELLOW,
             lineWeight: Int = 2,
             cornerRadius: Int = 3,

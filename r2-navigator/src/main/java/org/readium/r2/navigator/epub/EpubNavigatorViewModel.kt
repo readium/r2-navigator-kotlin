@@ -29,9 +29,9 @@ internal class EpubNavigatorViewModel(
     }
 
     fun onResourceLoaded(link: Link?, webView: R2BasicWebView): RunScriptCommand {
-        val styles = decorationTemplates.toJSON().toString()
+        val templates = decorationTemplates.toJSON().toString()
             .replace("\\n", " ")
-        var script = "readium.registerDecorationStyles($styles);\n"
+        var script = "readium.registerDecorationTemplates($templates);\n"
 
         if (link != null) {
             for ((group, decorations) in decorations) {

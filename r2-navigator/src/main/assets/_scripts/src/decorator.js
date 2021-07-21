@@ -15,7 +15,7 @@ let styles = new Map();
 let groups = new Map();
 var lastGroupId = 0;
 
-export function registerStyles(newStyles) {
+export function registerTemplates(newStyles) {
   var stylesheet = "";
 
   for (const [id, style] of Object.entries(newStyles)) {
@@ -32,12 +32,12 @@ export function registerStyles(newStyles) {
   }
 }
 
-export function getDecorations(groupId) {
-  var group = groups.get(groupId);
+export function getDecorations(groupName) {
+  var group = groups.get(groupName);
   if (!group) {
     let id = "r2-decoration-" + lastGroupId++;
-    group = DecorationGroup(id);
-    groups.set(groupId, group);
+    group = DecorationGroup(id, groupName);
+    groups.set(groupName, group);
   }
   return group;
 }
@@ -47,16 +47,16 @@ export function handleDecorationClickEvent(event) {
     return false;
   }
 
-  // FIXME: Iterate backward for z-index.
   function findTarget() {
     for (const [group, groupContent] of groups) {
-      for (const item of groupContent.items) {
-        if (item.clickableElements != null) {
-          for (const element of item.clickableElements) {
-            let rect = element.getBoundingClientRect().toJSON();
-            if (rectContainsPoint(rect, event.clientX, event.clientY, 1)) {
-              return { group, item, element, rect };
-            }
+      for (const item of groupContent.items.reverse()) {
+        if (!item.clickableElements) {
+          continue;
+        }
+        for (const element of item.clickableElements) {
+          let rect = element.getBoundingClientRect().toJSON();
+          if (rectContainsPoint(rect, event.clientX, event.clientY, 1)) {
+            return { group, item, element, rect };
           }
         }
       }
@@ -77,7 +77,7 @@ export function handleDecorationClickEvent(event) {
   );
 }
 
-export function DecorationGroup(groupId) {
+export function DecorationGroup(groupId, groupName) {
   var items = [];
   var lastItemId = 0;
   var container = null;
@@ -137,6 +137,7 @@ export function DecorationGroup(groupId) {
 
     let itemContainer = document.createElement("div");
     itemContainer.setAttribute("id", item.id);
+    itemContainer.setAttribute("data-style", item.decoration.style);
     itemContainer.style.setProperty("pointer-events", "none");
 
     let viewportWidth = window.innerWidth;
@@ -228,7 +229,7 @@ export function DecorationGroup(groupId) {
     item.clickableElements = Array.from(
       itemContainer.querySelectorAll("[data-activable='1']")
     );
-    if (item.clickableElements.length == 0) {
+    if (item.clickableElements.length === 0) {
       item.clickableElements = Array.from(itemContainer.children);
     }
   }
@@ -237,6 +238,7 @@ export function DecorationGroup(groupId) {
     if (!container) {
       container = document.createElement("div");
       container.setAttribute("id", groupId);
+      container.setAttribute("data-group", groupName);
       container.style.setProperty("pointer-events", "none");
       document.body.append(container);
     }
