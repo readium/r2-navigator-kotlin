@@ -91,9 +91,19 @@ data class Decoration(
      */
     interface Style : Parcelable {
         @Parcelize
-        data class Highlight(@ColorInt val tint: Int? = null, val isActive: Boolean = false) : Style
+        data class Highlight(@ColorInt override val tint: Int, override val isActive: Boolean = false) : Style, Tinted, Activable
         @Parcelize
-        data class Underline(@ColorInt val tint: Int? = null, val isActive: Boolean = false) : Style
+        data class Underline(@ColorInt override val tint: Int, override val isActive: Boolean = false) : Style, Tinted, Activable
+
+        /** A type of [Style] which has a tint color. */
+        interface Tinted {
+            @get:ColorInt val tint: Int
+        }
+
+        /** A type of [Style] which can be in an "active" state. */
+        interface Activable {
+            val isActive: Boolean
+        }
     }
 
     override fun toJSON() = JSONObject().apply {

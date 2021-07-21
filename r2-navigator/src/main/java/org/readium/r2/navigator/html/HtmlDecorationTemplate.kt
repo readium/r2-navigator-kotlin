@@ -88,26 +88,40 @@ data class HtmlDecorationTemplate(
             cornerRadius: Int = 3,
             alpha: Double = 0.3
         ) = HtmlDecorationTemplates {
-            set(Style.Highlight::class, highlight(defaultTint = defaultTint, cornerRadius = cornerRadius, alpha = alpha))
-            set(Style.Underline::class, underline(defaultTint = defaultTint, lineWeight = lineWeight, cornerRadius = cornerRadius))
+            set(Style.Highlight::class, highlight(defaultTint = defaultTint, lineWeight = lineWeight, cornerRadius = cornerRadius, alpha = alpha))
+            set(Style.Underline::class, underline(defaultTint = defaultTint, lineWeight = lineWeight, cornerRadius = cornerRadius, alpha = alpha))
         }
 
 
         /** Creates a new decoration template for the highlight style. */
-        fun highlight(@ColorInt defaultTint: Int, cornerRadius: Int, alpha: Double): HtmlDecorationTemplate {
-            val className = createUniqueClassName("highlight")
+        fun highlight(@ColorInt defaultTint: Int, lineWeight: Int, cornerRadius: Int, alpha: Double): HtmlDecorationTemplate =
+            createTemplate(asHighlight = true, defaultTint = defaultTint, lineWeight = lineWeight, cornerRadius = cornerRadius, alpha = alpha)
+
+        /** Creates a new decoration template for the underline style. */
+        fun underline(@ColorInt defaultTint: Int, lineWeight: Int, cornerRadius: Int, alpha: Double): HtmlDecorationTemplate =
+            createTemplate(asHighlight = false, defaultTint = defaultTint, lineWeight = lineWeight, cornerRadius = cornerRadius, alpha = alpha)
+
+        /**
+         * @param asHighlight When true, the non active style is of an highlight. Otherwise, it is
+         *        an underline.
+         */
+        private fun createTemplate(asHighlight: Boolean, @ColorInt defaultTint: Int, lineWeight: Int, cornerRadius: Int, alpha: Double): HtmlDecorationTemplate {
+            val className = createUniqueClassName(if (asHighlight) "highlight" else "underline")
             val padding = Padding(left = 1, right = 1)
             return HtmlDecorationTemplate(
                 layout = Layout.BOXES,
                 element = { decoration ->
-                    val style = decoration.style as? Style.Highlight
-                    val tint = style?.tint ?: defaultTint
-                    var extraStyle = ""
-                    if (style?.isActive == true) {
-                        extraStyle += " border-bottom: 2px solid ${tint.toCss()}"
+                    val tint = (decoration.style as? Style.Tinted)?.tint ?: defaultTint
+                    val isActive = (decoration.style as? Style.Activable)?.isActive ?: false
+                    var css = ""
+                    if (asHighlight || isActive) {
+                        css += "background-color: ${tint.toCss(alpha = alpha)} !important;"
+                    }
+                    if (!asHighlight || isActive) {
+                        css += "border-bottom: ${lineWeight}px solid ${tint.toCss()};"
                     }
                     """
-                    <div class="$className" style="background-color: ${tint.toCss(alpha = alpha)} !important; $extraStyle"/>"
+                    <div class="$className" style="$css"/>"
                     """
                 },
                 stylesheet = """
@@ -118,30 +132,6 @@ data class HtmlDecorationTemplate(
                         padding-bottom: ${padding.top + padding.bottom}px;
                         border-radius: ${cornerRadius}px;
                         box-sizing: border-box;
-                    }
-                    """
-            )
-        }
-
-        /** Creates a new decoration template for the underline style. */
-        fun underline(@ColorInt defaultTint: Int, lineWeight: Int, cornerRadius: Int): HtmlDecorationTemplate {
-            val className = createUniqueClassName("underline")
-            return HtmlDecorationTemplate(
-                layout = Layout.BOXES,
-                element = { decoration ->
-                    val style = decoration.style as? Style.Underline
-                    val tint = style?.tint ?: defaultTint
-                    """
-                    <div><span class="$className" style="background-color: ${tint.toCss()} !important"/></div>"
-                    """
-                },
-                stylesheet = """
-                    .$className {
-                        display: inline-block;
-                        width: 100%;
-                        height: ${lineWeight}px;
-                        border-radius: ${cornerRadius}px;
-                        vertical-align: text-bottom;
                     }
                     """
             )
