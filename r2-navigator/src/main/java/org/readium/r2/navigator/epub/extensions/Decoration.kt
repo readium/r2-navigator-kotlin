@@ -13,6 +13,11 @@ import org.readium.r2.navigator.ExperimentalDecorator
 import org.readium.r2.navigator.html.HtmlDecorationTemplates
 import timber.log.Timber
 
+// Decoration extensions related to HTML/EPUB.
+
+/**
+ * Generates the JavaScript used to apply the receiver list of [DecorationChange] in a web view.
+ */
 @ExperimentalDecorator
 internal fun List<DecorationChange>.javascriptForGroup(group: String, templates: HtmlDecorationTemplates): String? {
     if (isEmpty()) return null
@@ -27,6 +32,9 @@ internal fun List<DecorationChange>.javascriptForGroup(group: String, templates:
         """
 }
 
+/**
+ * Generates the JavaScript used to apply the receiver [DecorationChange] in a web view.
+ */
 @ExperimentalDecorator
 internal fun DecorationChange.javascript(templates: HtmlDecorationTemplates): String? {
     fun toJSON(decoration: Decoration): JSONObject? {

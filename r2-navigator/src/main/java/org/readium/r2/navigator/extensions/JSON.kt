@@ -9,6 +9,9 @@ package org.readium.r2.navigator.extensions
 import android.graphics.RectF
 import org.json.JSONObject
 
+/**
+ * Parses a [RectF] from its JSON representation.
+ */
 fun JSONObject.optRectF(name: String): RectF? =
     optJSONObject(name)?.let { json ->
         val left = json.optDouble("left").toFloat()
