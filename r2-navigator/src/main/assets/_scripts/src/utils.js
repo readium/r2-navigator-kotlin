@@ -76,14 +76,15 @@ export function scrollToPosition(position) {
     throw "scrollToPosition() must be given a position from 0.0 to  1.0";
   }
 
+  let offset;
   if (isScrollModeEnabled()) {
-    var offset = document.scrollingElement.scrollHeight * position;
+    offset = document.scrollingElement.scrollHeight * position;
     document.scrollingElement.scrollTop = offset;
     // window.scrollTo(0, offset);
   } else {
     var documentWidth = document.scrollingElement.scrollWidth;
     var factor = isRTL() ? -1 : 1;
-    var offset = documentWidth * position * factor;
+    offset = documentWidth * position * factor;
     document.scrollingElement.scrollLeft = snapOffset(offset);
   }
 }

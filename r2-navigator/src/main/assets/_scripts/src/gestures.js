@@ -6,7 +6,7 @@
 
 import { handleDecorationClickEvent } from "./decorator";
 
-window.addEventListener("DOMContentLoaded", function (event) {
+window.addEventListener("DOMContentLoaded", function () {
   document.addEventListener("click", onClick, false);
 });
 
