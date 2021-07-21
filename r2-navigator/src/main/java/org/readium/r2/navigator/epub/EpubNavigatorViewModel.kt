@@ -15,6 +15,7 @@ import org.readium.r2.navigator.util.createViewModelFactory
 import org.readium.r2.shared.publication.Link
 import kotlin.reflect.KClass
 
+@OptIn(ExperimentalDecorator::class)
 internal class EpubNavigatorViewModel(
     val decorationTemplates: HtmlDecorationTemplates
 ) : ViewModel() {

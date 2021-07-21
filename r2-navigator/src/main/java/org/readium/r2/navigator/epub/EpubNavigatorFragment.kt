@@ -55,7 +55,7 @@ import kotlin.reflect.KClass
  *
  * To use this [Fragment], create a factory with `EpubNavigatorFragment.createFactory()`.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, ExperimentalDecorator::class)
 class EpubNavigatorFragment private constructor(
     internal val publication: Publication,
     private val baseUrl: String,

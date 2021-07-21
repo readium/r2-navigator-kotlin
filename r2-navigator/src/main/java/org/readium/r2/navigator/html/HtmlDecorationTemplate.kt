@@ -13,6 +13,7 @@ import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.Decoration.Style
+import org.readium.r2.navigator.ExperimentalDecorator
 import org.readium.r2.shared.JSONable
 import kotlin.reflect.KClass
 
@@ -35,6 +36,7 @@ import kotlin.reflect.KClass
  *        and IDs to avoid conflicts with the HTML resource itself. Best practice is to prefix with
  *        your app name. r2- and readium- are reserved by the Readium toolkit.
  */
+@ExperimentalDecorator
 data class HtmlDecorationTemplate(
     val layout: Layout,
     val width: Width = Width.WRAP,
@@ -143,6 +145,7 @@ data class HtmlDecorationTemplate(
     }
 }
 
+@ExperimentalDecorator
 class HtmlDecorationTemplates private constructor(
     internal val styles: MutableMap<KClass<*>, HtmlDecorationTemplate> = mutableMapOf()
 ): JSONable {

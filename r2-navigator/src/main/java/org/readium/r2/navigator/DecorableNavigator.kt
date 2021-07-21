@@ -23,6 +23,7 @@ import kotlin.reflect.KClass
 /**
  * A navigator able to render arbitrary decorations over a publication.
  */
+@ExperimentalDecorator
 interface DecorableNavigator : Navigator {
     /**
      * Declares the current state of the decorations in the given decoration [group].
@@ -75,6 +76,7 @@ interface DecorableNavigator : Navigator {
  * @param extras Additional context data specific to a reading app. Readium does not use it.
  */
 @Parcelize
+@ExperimentalDecorator
 data class Decoration(
     val id: DecorationId,
     val locator: Locator,
@@ -114,9 +116,11 @@ data class Decoration(
 }
 
 /** Unique identifier for a decoration. */
+@ExperimentalDecorator
 typealias DecorationId = String
 
 /** Represents an atomic change in a list of [Decoration] objects. */
+@ExperimentalDecorator
 sealed class DecorationChange {
     data class Added(val decoration: Decoration) : DecorationChange()
     data class Updated(val decoration: Decoration) : DecorationChange()
@@ -129,6 +133,7 @@ sealed class DecorationChange {
  *
  * The changes need to be applied in the same order, one by one.
  */
+@ExperimentalDecorator
 suspend fun List<Decoration>.changesByHref(target: List<Decoration>): Map<String, List<DecorationChange>> = withContext(Dispatchers.IO) {
     val source = this@changesByHref
     val result = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
