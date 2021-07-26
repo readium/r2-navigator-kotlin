@@ -45,13 +45,16 @@ interface DecorableNavigator : Navigator {
     fun <T: Decoration.Style> supportsDecorationStyle(style: KClass<T>): Boolean
 
     /**
-     * Registers new listeners for decoration interactions in the given [group].
-     *
-     * @param onActivated Called when the user activates the decoration, e.g. with a click or tap.
+     * Registers a new [listener] for decoration interactions in the given [group].
      */
-    fun addDecorationListener(group: String, onActivated: OnActivatedListener? = null)
+    fun addDecorationListener(group: String, listener: Listener)
 
-    fun interface OnActivatedListener {
+    /**
+     * Removes the given [listener] for all decoration interactions.
+     */
+    fun removeDecorationListener(listener: Listener)
+
+    interface Listener {
         /**
          * Called when the user activates the [decoration], e.g. with a click or tap.
          *
@@ -59,8 +62,9 @@ interface DecorableNavigator : Navigator {
          * @param group Name of the group the decoration belongs to.
          * @param rect Frame of the bounding rect for the decoration, in the coordinate of the
          *        navigator view. This is only useful in the context of a VisualNavigator.
+         * @return Whether the listener handled the interaction.
          */
-        fun onDecorationActivated(decoration: Decoration, group: String, rect: RectF?)
+        fun onDecorationActivated(decoration: Decoration, group: String, rect: RectF?): Boolean
     }
 }
 

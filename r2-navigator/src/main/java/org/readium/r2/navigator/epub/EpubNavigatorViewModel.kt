@@ -87,12 +87,17 @@ internal class EpubNavigatorViewModel(
     }
 
     /** Decoration group listeners, indexed by the group name. */
-    private val decorationListeners: MutableMap<String, List<DecorableNavigator.OnActivatedListener>> = mutableMapOf()
+    private val decorationListeners: MutableMap<String, List<DecorableNavigator.Listener>> = mutableMapOf()
 
-    fun addDecorationListener(group: String, listener: DecorableNavigator.OnActivatedListener?) {
-        listener ?: return
+    fun addDecorationListener(group: String, listener: DecorableNavigator.Listener) {
         val listeners = decorationListeners[group] ?: emptyList()
         decorationListeners[group] = listeners + listener
+    }
+
+    fun removeDecorationListener(listener: DecorableNavigator.Listener) {
+        for ((group, listeners) in decorationListeners) {
+            decorationListeners[group] = listeners.filter { it != listener }
+        }
     }
 
     fun onDecorationActivated(id: DecorationId, group: String, rect: RectF): Boolean {
@@ -105,9 +110,12 @@ internal class EpubNavigatorViewModel(
             ?: return false
 
         for (listener in listeners) {
-            listener.onDecorationActivated(decoration, group, rect)
+            if (listener.onDecorationActivated(decoration, group, rect)) {
+                return true
+            }
         }
-        return true
+
+        return false
     }
 
     companion object {

@@ -31,7 +31,6 @@ import org.readium.r2.navigator.extensions.htmlId
 import org.readium.r2.navigator.extensions.optRectF
 import org.readium.r2.navigator.extensions.positionsByResource
 import org.readium.r2.navigator.extensions.withBaseUrl
-import org.readium.r2.navigator.html.HtmlDecorationTemplate
 import org.readium.r2.navigator.html.HtmlDecorationTemplates
 import org.readium.r2.navigator.pager.R2EpubPageFragment
 import org.readium.r2.navigator.pager.R2PagerAdapter
@@ -359,8 +358,12 @@ class EpubNavigatorFragment private constructor(
     override fun <T : Decoration.Style> supportsDecorationStyle(style: KClass<T>): Boolean =
         viewModel.supportsDecorationStyle(style)
 
-    override fun addDecorationListener(group: String, onActivated: DecorableNavigator.OnActivatedListener?) {
-        viewModel.addDecorationListener(group, onActivated)
+    override fun addDecorationListener(group: String, listener: DecorableNavigator.Listener) {
+        viewModel.addDecorationListener(group, listener)
+    }
+
+    override fun removeDecorationListener(listener: DecorableNavigator.Listener) {
+        viewModel.removeDecorationListener(listener)
     }
 
     override suspend fun applyDecorations(decorations: List<Decoration>, group: String) {
