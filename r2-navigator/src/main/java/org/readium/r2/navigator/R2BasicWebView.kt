@@ -213,16 +213,16 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
 
         // FIXME: Call listener.onTap if scrollLeft|Right fails
         return when {
-            thresholdRange.contains(event.clientX) -> {
+            thresholdRange.contains(event.point.x) -> {
                 scrollLeft(false)
                 true
             }
-            thresholdRange.contains(clientWidth - event.clientX) -> {
+            thresholdRange.contains(clientWidth - event.point.x) -> {
                 scrollRight(false)
                 true
             }
             else ->
-                runBlocking(uiScope.coroutineContext) { listener.onTap(PointF(event.clientX.toFloat(), event.clientY.toFloat())) }
+                runBlocking(uiScope.coroutineContext) { listener.onTap(event.point) }
         }
     }
 
@@ -235,38 +235,39 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
         val id = obj?.optNullableString("id")
         val group = obj?.optNullableString("group")
         val rect = obj?.optRectF("rect")
-        if (id == null || group == null || rect == null) {
+        val click = TapEvent.fromJSONObject(obj?.optJSONObject("click"))
+        if (id == null || group == null || rect == null || click == null) {
             Timber.e("Invalid JSON for onDecorationActivated: $eventJson")
             return false
         }
 
-        return listener.onDecorationActivated(id, group, rect)
+        return listener.onDecorationActivated(id, group, rect, click.point)
     }
 
     /** Produced by gestures.js */
     private data class TapEvent(
         val defaultPrevented: Boolean,
-        val screenX: Double,
-        val screenY: Double,
-        val clientX: Double,
-        val clientY: Double,
+        val point: PointF,
         val targetElement: String,
         val interactiveElement: String?
     ) {
         companion object {
-            fun fromJSON(json: String): TapEvent? {
-                val obj = tryOrNull { JSONObject(json) } ?: return null
+            fun fromJSONObject(obj: JSONObject?): TapEvent? {
+                obj ?: return null
+
+                val x = obj.optDouble("x").toFloat()
+                val y = obj.optDouble("y").toFloat()
 
                 return TapEvent(
                     defaultPrevented = obj.optBoolean("defaultPrevented"),
-                    screenX = obj.optDouble("screenX"),
-                    screenY = obj.optDouble("screenY"),
-                    clientX = obj.optDouble("clientX"),
-                    clientY = obj.optDouble("clientY"),
+                    point = PointF(x, y),
                     targetElement = obj.optString("targetElement"),
                     interactiveElement = obj.optNullableString("interactiveElement")
                 )
             }
+
+            fun fromJSON(json: String): TapEvent? =
+                fromJSONObject(tryOrNull { JSONObject(json) })
         }
     }
 
@@ -483,7 +484,7 @@ open class R2BasicWebView(context: Context, attrs: AttributeSet) : WebView(conte
         fun onPageEnded(end: Boolean)
         fun onScroll()
         fun onTap(point: PointF): Boolean
-        fun onDecorationActivated(id: DecorationId, group: String, rect: RectF): Boolean = false
+        fun onDecorationActivated(id: DecorationId, group: String, rect: RectF, point: PointF): Boolean = false
         fun onProgressionChanged()
         fun onHighlightActivated(id: String)
         fun onHighlightAnnotationMarkActivated(id: String)

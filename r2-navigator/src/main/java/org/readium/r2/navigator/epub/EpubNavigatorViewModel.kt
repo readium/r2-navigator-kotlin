@@ -6,6 +6,7 @@
 
 package org.readium.r2.navigator.epub
 
+import android.graphics.PointF
 import android.graphics.RectF
 import androidx.lifecycle.ViewModel
 import org.readium.r2.navigator.*
@@ -100,7 +101,7 @@ internal class EpubNavigatorViewModel(
         }
     }
 
-    fun onDecorationActivated(id: DecorationId, group: String, rect: RectF): Boolean {
+    fun onDecorationActivated(id: DecorationId, group: String, rect: RectF, point: PointF): Boolean {
         val listeners = decorationListeners[group]
             ?.takeIf { it.isNotEmpty() }
             ?: return false
@@ -109,8 +110,11 @@ internal class EpubNavigatorViewModel(
             ?.firstOrNull { it.id == id }
             ?: return false
 
+        val event = DecorableNavigator.OnActivatedEvent(
+            decoration = decoration, group = group, rect = rect, point = point
+        )
         for (listener in listeners) {
-            if (listener.onDecorationActivated(decoration, group, rect)) {
+            if (listener.onDecorationActivated(event)) {
                 return true
             }
         }

@@ -6,6 +6,7 @@
 
 package org.readium.r2.navigator
 
+import android.graphics.PointF
 import android.graphics.RectF
 import android.os.Bundle
 import android.os.Parcelable
@@ -55,17 +56,32 @@ interface DecorableNavigator : Navigator {
     fun removeDecorationListener(listener: Listener)
 
     interface Listener {
+
         /**
-         * Called when the user activates the [decoration], e.g. with a click or tap.
+         * Called when the user activates a decoration, e.g. with a click or tap.
          *
-         * @param decoration Activated decoration.
-         * @param group Name of the group the decoration belongs to.
-         * @param rect Frame of the bounding rect for the decoration, in the coordinate of the
-         *        navigator view. This is only useful in the context of a VisualNavigator.
+         * @param event Holds the metadata about the interaction event.
          * @return Whether the listener handled the interaction.
          */
-        fun onDecorationActivated(decoration: Decoration, group: String, rect: RectF?): Boolean
+        fun onDecorationActivated(event: OnActivatedEvent): Boolean
     }
+
+    /**
+     * Holds the metadata about a decoration activation interaction.
+     *
+     * @param decoration Activated decoration.
+     * @param group Name of the group the decoration belongs to.
+     * @param rect Frame of the bounding rect for the decoration, in the coordinate of the
+     *        navigator view. This is only useful in the context of a VisualNavigator.
+     * @param point Event point of the interaction, in the coordinate of the navigator view. This is
+     *        only useful in the context of a VisualNavigator.
+     */
+    data class OnActivatedEvent(
+        val decoration: Decoration,
+        val group: String,
+        val rect: RectF? = null,
+        val point: PointF? = null
+    )
 }
 
 /**
