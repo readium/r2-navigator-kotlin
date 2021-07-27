@@ -64,9 +64,7 @@ export function scrollToId(id) {
     return false;
   }
 
-  element.scrollIntoView({ inline: "start", block: "start" });
-  snapCurrentOffset();
-  return true;
+  return scrollToRect(element.getBoundingClientRect());
 }
 
 // Position must be in the range [0 - 1], 0-100%.
@@ -103,13 +101,17 @@ export function scrollToText(text) {
 }
 
 function scrollToRange(range) {
-  var rect = range.getBoundingClientRect();
+  scrollToRect(range.getBoundingClientRect());
+}
+
+function scrollToRect(rect) {
   if (isScrollModeEnabled()) {
     document.scrollingElement.scrollTop =
       rect.top + window.scrollY - window.innerHeight / 2;
   } else {
-    document.scrollingElement.scrollLeft = rect.left + window.scrollX;
-    snapCurrentOffset();
+    document.scrollingElement.scrollLeft = snapOffset(
+      rect.left + window.scrollX
+    );
   }
 }
 
