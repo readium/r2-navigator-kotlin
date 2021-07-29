@@ -103,7 +103,6 @@ internal class EpubNavigatorViewModel(
 
     fun onDecorationActivated(id: DecorationId, group: String, rect: RectF, point: PointF): Boolean {
         val listeners = decorationListeners[group]
-            ?.takeIf { it.isNotEmpty() }
             ?: return false
 
         val decoration = decorations[group]
