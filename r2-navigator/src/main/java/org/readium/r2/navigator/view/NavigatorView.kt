@@ -50,7 +50,7 @@ class NavigatorView(context: Context, attributes: AttributeSet) : View(context, 
         val adapter = checkNotNull(this.adapter)
         val spreadIndex = adapter.positionForHref(locator.href)
         this.viewPager.currentItem = spreadIndex
-        adapter.scrollTo(locator.locations, currentView)
+        adapter.scrollTo(locator.locations, currentView, spreadIndex)
     }
 
     private val currentView: View

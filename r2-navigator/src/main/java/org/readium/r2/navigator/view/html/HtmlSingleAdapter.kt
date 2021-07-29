@@ -38,7 +38,8 @@ internal class HtmlSingleAdapter : SpreadAdapter, CoroutineScope {
 
     }
 
-    fun scrollTo() {
+    override fun scrollTo(locations: Locator.Locations, view: View) {
 
     }
+
 }

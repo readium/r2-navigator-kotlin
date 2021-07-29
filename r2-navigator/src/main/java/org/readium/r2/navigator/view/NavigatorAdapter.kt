@@ -61,11 +61,7 @@ internal class NavigatorAdapter(
                 it is Spread.DoublePage && (it.left == resourceIndex || it.right == resourceIndex)) }
     }
 
-    fun scrollTo(locations: Locator.Locations, view: View) {
-        if (view !is WebView) {
-            return
-        }
-
-        //TODO: scroll the Webview
+    fun scrollTo(locations: Locator.Locations, view: View, position: Int) {
+        spreadAdapters[position].scrollTo(locations, view)
     }
 }

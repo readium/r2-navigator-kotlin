@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import org.readium.r2.navigator.view.layout.Spread
 import org.readium.r2.navigator.view.SpreadAdapter
+import org.readium.r2.shared.publication.Locator
 import kotlin.coroutines.CoroutineContext
 
 internal class HtmlDoubleAdapter : SpreadAdapter, CoroutineScope {
@@ -23,5 +24,9 @@ internal class HtmlDoubleAdapter : SpreadAdapter, CoroutineScope {
 
     override fun bindSpread(spread: Spread, view: View): Job {
         TODO("Not yet implemented")
+    }
+
+    override fun scrollTo(locations: Locator.Locations, view: View) {
+
     }
 }
