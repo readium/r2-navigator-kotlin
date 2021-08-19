@@ -3,65 +3,106 @@ package org.readium.r2.navigator.view
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.WebView
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.Job
-import org.readium.r2.navigator.view.layout.LayoutComputer
-import org.readium.r2.navigator.view.layout.Spread
+import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
-import org.readium.r2.shared.publication.Publication
-import org.readium.r2.shared.publication.ReadingProgression
-import org.readium.r2.shared.publication.indexOfFirstWithHref
-import org.readium.r2.shared.publication.presentation.page
+import org.readium.r2.shared.publication.firstWithHref
+import timber.log.Timber
 
 internal class NavigatorAdapter(
     private val context: Context,
-    private val adapters: List<SpreadAdapter>,
-    private val publication: Publication,
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    private val links: List<Link>,
+    private val adapterFactories: List<SpreadAdapterFactory>,
+) : RecyclerView.Adapter<NavigatorAdapter.ViewHolder>() {
 
-    class ViewHolder(
+    data class ViewHolder(
         val view: View,
-        var loadingJob: Job? = null
+        var adapter: SpreadAdapter? = null
     ) : RecyclerView.ViewHolder(view)
 
-    private val spreads: List<Spread> =
-        LayoutComputer(publication.metadata.effectiveReadingProgression == ReadingProgression.RTL)
-            .compute(publication.readingOrder.map { it.properties.page })
+    data class Settings(
+        val fontSize: Boolean
+    )
 
-    private val spreadAdapters: List<SpreadAdapter> =
-            spreads.map { spread -> adapters.first { adapter -> adapter.supportsSpread(spread)} }
+    private data class Spread(
+        val adapter: SpreadAdapter,
+        val viewType: Int
+    )
+
+    private val spreads: List<Spread> =
+        computeSpreads()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val adapter = adapters[viewType]
-        val view = adapter.createView(context)
+        val factory = adapterFactories[viewType]
+        val view = factory.createView(context)
         return ViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        spreadAdapters[position].bindSpread(spreads[position], holder.itemView)
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.adapter?.unbind()
+        val adapter = spreads[position].adapter
+        adapter.bind(holder.itemView)
+        holder.adapter = adapter
         holder.itemView.tag = position
     }
 
     override fun getItemCount(): Int =
-        spreadAdapters.size
+        spreads.size
 
     override fun getItemViewType(position: Int): Int =
-        adapters.indexOfFirst { it === spreadAdapters[position] }
+        spreads[position].viewType
 
-    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+    override fun onViewRecycled(holder: ViewHolder) {
         super.onViewRecycled(holder)
         holder.itemView.tag = null
     }
 
     fun positionForHref(href: String): Int {
-        val resourceIndex = publication.readingOrder.indexOfFirstWithHref(href)!!
-        return spreads.indexOfFirst {
-            (it is Spread.SinglePage && it.page == resourceIndex ||
-                it is Spread.DoublePage && (it.left == resourceIndex || it.right == resourceIndex)) }
+        return spreads.indexOfFirst { it.adapter.links.firstWithHref(href) != null }
+    }
+
+    fun resourcesForView(view: View): List<ResourceAdapter> {
+        val position = view.tag as Int
+        val adapter = spreads[position].adapter
+        return adapter.resourceAdapters(view)
     }
 
     fun scrollTo(locations: Locator.Locations, view: View, position: Int) {
-        spreadAdapters[position].scrollTo(locations, view)
+        val adapter = spreads[position].adapter
+        adapter.scrollTo(locations, view)
+    }
+
+    fun applySettings(settings: Settings) {
+        spreads.forEach {
+            it.adapter.applySettings()
+        }
+    }
+
+    private fun computeSpreads(): List<Spread> {
+        val spreads: MutableList<Spread> = mutableListOf()
+        var remaining: List<Link> = links
+
+        while (remaining.isNotEmpty()) {
+            var found = false
+
+            for ((index, factory) in adapterFactories.withIndex()) {
+                val result = factory.createSpread(remaining)
+                if (result != null) {
+                    val spread = Spread(result.first, index)
+                    spreads.add(spread)
+                    remaining = result.second
+                    found = true
+                    break
+                }
+            }
+
+            if (!found) {
+                val first = remaining.first()
+                remaining = remaining.subList(1, remaining.size)
+                Timber.w("Skipping resource $first because no adapter supports it.")
+            }
+        }
+
+        return spreads
     }
 }

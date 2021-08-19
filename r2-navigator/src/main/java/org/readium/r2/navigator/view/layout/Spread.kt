@@ -1,13 +1,16 @@
 package org.readium.r2.navigator.view.layout
 
+import org.readium.r2.shared.publication.Link
+
 sealed class Spread {
 
-    data class SinglePage(val page: Int) : Spread()
+    data class SinglePage(val page: Link) : Spread()
 
-    data class DoublePage(val left: Int?, val right: Int?) : Spread()
+    data class DoublePage(val left: Link?, val right: Link?) : Spread()
 
-    companion object {
-        const val SINGLE_PAGE_TYPE = 0
-        const val DOUBLE_PAGE_TYPE = 1
-    }
+    val links: List<Link> get() =
+        when (this) {
+            is DoublePage -> listOfNotNull(this.left, this.right)
+            is SinglePage -> listOf(this.page)
+        }
 }
