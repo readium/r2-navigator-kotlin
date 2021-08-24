@@ -21,7 +21,7 @@ internal class NavigatorAdapter(
     ) : RecyclerView.ViewHolder(view)
 
     data class Settings(
-        val fontSize: Boolean
+        val fontSize: Double
     )
 
     private data class Spread(
@@ -32,6 +32,9 @@ internal class NavigatorAdapter(
     private val spreads: List<Spread> =
         computeSpreads()
 
+    private val boundAdapters: MutableSet<SpreadAdapter> =
+        mutableSetOf()
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val factory = adapterFactories[viewType]
         val view = factory.createView(context)
@@ -39,11 +42,11 @@ internal class NavigatorAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.adapter?.unbind()
-        val adapter = spreads[position].adapter
-        adapter.bind(holder.itemView)
-        holder.adapter = adapter
+        val spread = spreads[position]
+        spread.adapter.bind(holder.itemView)
+        holder.adapter = spread.adapter
         holder.itemView.tag = position
+        boundAdapters.add(spread.adapter)
     }
 
     override fun getItemCount(): Int =
@@ -54,7 +57,10 @@ internal class NavigatorAdapter(
 
     override fun onViewRecycled(holder: ViewHolder) {
         super.onViewRecycled(holder)
+        holder.adapter?.unbind()
+        holder.adapter = null
         holder.itemView.tag = null
+        boundAdapters.remove(holder.adapter)
     }
 
     fun positionForHref(href: String): Int {

@@ -28,6 +28,12 @@ object DefaultLayoutPolicy : LayoutPolicy {
             ReadingProgression.AUTO -> autoReadingProgression(publication.metadata)
         }
 
+    override fun resolveContinuous(publication: Publication): Boolean =
+        when (publication.metadata.presentation.continuous) {
+            null, false -> false
+            true -> true
+        }
+
     private fun autoReadingProgression(metadata: Metadata): EffectiveReadingProgression {
         // https://github.com/readium/readium-css/blob/develop/docs/CSS16-internationalization.md#missing-page-progression-direction
         if (metadata.languages.size != 1) {

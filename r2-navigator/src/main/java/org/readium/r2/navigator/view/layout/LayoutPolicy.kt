@@ -8,4 +8,6 @@ interface LayoutPolicy {
     fun resolveSpreadHint(link: Link, publication: Publication, isLandscape: Boolean): Boolean
 
     fun resolveReadingProgression(publication: Publication): EffectiveReadingProgression
+
+    fun resolveContinuous(publication: Publication): Boolean
 }
