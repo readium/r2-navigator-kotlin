@@ -24,21 +24,17 @@ class R2ViewPager : R2RTLViewPager {
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet) : super(context, attrs)
 
-    override fun setCurrentItem(item: Int, smoothScroll: Boolean) {
-        super.setCurrentItem(item, smoothScroll)
-    }
-
     override fun setCurrentItem(item: Int) {
         super.setCurrentItem(item, false)
     }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
-        if (DEBUG) Timber.tag(this::class.java.simpleName).d("ev.action ${ev.action}")
+        if (DEBUG) Timber.d("ev.action ${ev.action}")
         if (type == Publication.TYPE.EPUB) {
             when (ev.action and MotionEvent.ACTION_MASK) {
                 MotionEvent.ACTION_DOWN -> {
                     // prevent swipe from view pager directly
-                    if (DEBUG) Timber.tag(this::class.java.simpleName).d("ACTION_DOWN")
+                    if (DEBUG) Timber.d("ACTION_DOWN")
                     return false
                 }
             }
@@ -57,12 +53,12 @@ class R2ViewPager : R2RTLViewPager {
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
-        if (DEBUG) Timber.tag(this::class.java.simpleName).d("onInterceptTouchEvent ev.action ${ev.action}")
+        if (DEBUG) Timber.d("onInterceptTouchEvent ev.action ${ev.action}")
         if (type == Publication.TYPE.EPUB) {
             when (ev.action and MotionEvent.ACTION_MASK) {
                 MotionEvent.ACTION_DOWN -> {
                     // prevent swipe from view pager directly
-                    if (DEBUG) Timber.tag(this::class.java.simpleName).d("onInterceptTouchEvent ACTION_DOWN")
+                    if (DEBUG) Timber.d("onInterceptTouchEvent ACTION_DOWN")
                     return false
                 }
             }
