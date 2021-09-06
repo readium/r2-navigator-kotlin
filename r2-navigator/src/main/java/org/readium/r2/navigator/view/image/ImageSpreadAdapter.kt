@@ -58,10 +58,9 @@ internal class ImageSpreadAdapter(
     }
 
     override fun resourceAdapters(view: View): List<ResourceAdapter> {
-        return listOf(
-            ImageResourceAdapter(view),
-            ImageResourceAdapter(view)
-        )
+        return links.map {
+            ImageResourceAdapter(it, view)
+        }
     }
 
     private fun mergeBitmaps(first: Bitmap, second: Bitmap): Bitmap {

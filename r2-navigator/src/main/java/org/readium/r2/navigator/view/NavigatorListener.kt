@@ -1,9 +1,12 @@
 package org.readium.r2.navigator.view
 
-interface NavigatorListener {
-    fun onTap()
+import android.graphics.PointF
+import org.readium.r2.shared.publication.Locator
 
-    fun onLocationChanged()
+interface NavigatorListener {
+    fun onTap(point: PointF): Boolean
+
+    fun onLocationChanged(newLocation: Locator)
 
     fun onHighlightActivated()
 }

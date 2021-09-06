@@ -67,6 +67,10 @@ internal class NavigatorAdapter(
         return spreads.indexOfFirst { it.adapter.links.firstWithHref(href) != null }
     }
 
+    fun hrefForPosition(position: Int) {
+
+    }
+
     fun resourcesForView(view: View): List<ResourceAdapter> {
         val position = view.tag as Int
         val adapter = spreads[position].adapter
