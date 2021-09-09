@@ -430,8 +430,13 @@ class EpubNavigatorFragment private constructor(
         return this.listener?.onTap(point) ?: false
     }
 
-    override fun onDecorationActivated(id: DecorationId, group: String, rect: RectF, point: PointF): Boolean
-        = viewModel.onDecorationActivated(id, group, rect, point)
+    override fun onDecorationActivated(id: DecorationId, group: String, rect: RectF, point: PointF): Boolean {
+        currentFragment?.paddingTop?.let { top ->
+            rect.top += top
+            point.y += top
+        }
+        return viewModel.onDecorationActivated(id, group, rect, point)
+    }
 
     override fun onProgressionChanged() {
         notifyCurrentLocation()
@@ -529,6 +534,31 @@ class EpubNavigatorFragment private constructor(
      */
     private var debounceLocationNotificationJob: Job? = null
 
+    /**
+     * Mapping between reading order hrefs and the table of contents title.
+     */
+    private val tableOfContentsTitleByHref: Map<String, String> by lazy {
+        fun fulfill(linkList: List<Link>): MutableMap<String, String> {
+            var result: MutableMap<String, String> = mutableMapOf()
+
+            for (link in linkList) {
+                val title = link.title?: ""
+
+                if (title.isNotEmpty()) {
+                    result[link.href] = title
+                }
+
+                val subResult = fulfill(link.children)
+
+                result = (subResult + result) as MutableMap<String, String>
+            }
+
+            return result
+        }
+
+        fulfill(publication.tableOfContents).toMap()
+    }
+
     private fun notifyCurrentLocation() {
         val navigator = this
         debounceLocationNotificationJob?.cancel()
@@ -550,6 +580,7 @@ class EpubNavigatorFragment private constructor(
             }
 
             val locator = positions[positionIndex]
+                    .copy(title = tableOfContentsTitleByHref[resource.href])
                     .copyWithLocations(progression = progression)
 
             if (locator == _currentLocator.value) {
