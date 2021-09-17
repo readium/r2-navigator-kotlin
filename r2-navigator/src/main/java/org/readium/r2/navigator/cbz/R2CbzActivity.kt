@@ -146,6 +146,7 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
         navigatorFragment.goBackward()
     }
 
+    @Suppress("DEPRECATION")
     override fun toggleActionBar() {
         if (allowToggleActionBar) {
             launch {
@@ -204,6 +205,7 @@ open class R2CbzActivity : AppCompatActivity(), CoroutineScope, IR2Activity, Vis
                     setCurrent(resources)
                 }
 
+                @Suppress("DEPRECATION")
                 if (supportActionBar!!.isShowing && allowToggleActionBar) {
                     resourcePager.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                             or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
