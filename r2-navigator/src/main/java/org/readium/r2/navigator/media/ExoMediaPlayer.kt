@@ -46,11 +46,6 @@ import kotlin.time.ExperimentalTime
 
 /**
  * An implementation of [MediaPlayer] using ExoPlayer.
- *
- * To override the button icons of the media-style notification, please refer to
- * https://exoplayer.dev/doc/reference/com/google/android/exoplayer2/ui/PlayerNotificationManager.html
- *
- * In particular, you might want to override `exo_notification_rewind` and `exo_notification_fastforward`.
  */
 @ExperimentalAudiobook
 @OptIn(ExperimentalTime::class)
@@ -116,6 +111,8 @@ class ExoMediaPlayer(
         .setChannelDescriptionResourceId(R.string.r2_media_notification_channel_description)
         .setMediaDescriptionAdapter(DescriptionAdapter(mediaSession.controller, media))
         .setNotificationListener(NotificationListener())
+        .setRewindActionIconResourceId(R.drawable.r2_media_notification_rewind)
+        .setFastForwardActionIconResourceId(R.drawable.r2_media_notification_fastforward)
         .build()
         .apply {
             setMediaSessionToken(mediaSession.sessionToken)
