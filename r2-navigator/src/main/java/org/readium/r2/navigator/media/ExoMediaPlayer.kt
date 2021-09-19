@@ -20,7 +20,6 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.audio.AudioAttributes
-import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.ext.mediasession.MediaSessionConnector
 import com.google.android.exoplayer2.ext.mediasession.TimelineQueueNavigator
 import com.google.android.exoplayer2.source.DefaultMediaSourceFactory
@@ -29,8 +28,6 @@ import com.google.android.exoplayer2.upstream.DataSource
 import com.google.android.exoplayer2.upstream.HttpDataSource
 import com.google.android.exoplayer2.upstream.cache.Cache
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource
-import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor
-import com.google.android.exoplayer2.upstream.cache.SimpleCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -43,11 +40,9 @@ import org.readium.r2.shared.extensions.asInstance
 import org.readium.r2.shared.fetcher.Resource
 import org.readium.r2.shared.publication.*
 import timber.log.Timber
-import java.io.File
 import java.net.UnknownHostException
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
-import kotlin.time.seconds
 
 /**
  * An implementation of [MediaPlayer] using ExoPlayer.
@@ -87,16 +82,19 @@ class ExoMediaPlayer(
     }
 
     private val player: ExoPlayer = SimpleExoPlayer.Builder(context)
+        .setSeekBackIncrementMs(Duration.seconds(30).inWholeMilliseconds)
+        .setSeekForwardIncrementMs(Duration.seconds(30).inWholeMilliseconds)
         .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+        .setAudioAttributes(AudioAttributes.Builder()
+            .setContentType(C.CONTENT_TYPE_MUSIC)
+            .setUsage(C.USAGE_MEDIA)
+            .build(),
+            true
+        )
+        .setHandleAudioBecomingNoisy(true)
         .build()
         .apply {
-            audioAttributes = AudioAttributes.Builder()
-                .setContentType(C.CONTENT_TYPE_MUSIC)
-                .setUsage(C.USAGE_MEDIA)
-                .build()
-
-            setHandleAudioBecomingNoisy(true)
-            addListener(EventListener())
+            addListener(PlayerListener())
     //        addAnalyticsListener(EventLogger(null))
         }
 
@@ -105,29 +103,29 @@ class ExoMediaPlayer(
         get() = player.playbackParameters.speed.toDouble()
         set(speed) {
             val pitch = player.playbackParameters.pitch
-            player.setPlaybackParameters(PlaybackParameters(speed.toFloat(), pitch))
+            player.playbackParameters = PlaybackParameters(speed.toFloat(), pitch)
         }
 
     private val notificationManager =
-        PlayerNotificationManager.createWithNotificationChannel(
+        PlayerNotificationManager.Builder(
             context,
-            MEDIA_CHANNEL_ID,
-            R.string.r2_media_notification_channel_name,
-            R.string.r2_media_notification_channel_description,
             MEDIA_NOTIFICATION_ID,
-            DescriptionAdapter(mediaSession.controller, media),
-            NotificationListener()
-        ).apply {
+            MEDIA_CHANNEL_ID
+        )
+        .setChannelNameResourceId(R.string.r2_media_notification_channel_name)
+        .setChannelDescriptionResourceId(R.string.r2_media_notification_channel_description)
+        .setMediaDescriptionAdapter(DescriptionAdapter(mediaSession.controller, media))
+        .setNotificationListener(NotificationListener())
+        .build()
+        .apply {
             setMediaSessionToken(mediaSession.sessionToken)
             setPlayer(player)
             setSmallIcon(R.drawable.exo_notification_small_icon)
             setUsePlayPauseActions(true)
             setUseStopAction(false)
             setUseChronometer(false)
-            setControlDispatcher(DefaultControlDispatcher(
-                Duration.seconds(30).inWholeMilliseconds,
-                Duration.seconds(30).inWholeMilliseconds
-            ))
+            setUseRewindAction(true)
+            setUseRewindActionInCompactView(true)
         }
 
     private val mediaSessionConnector = MediaSessionConnector(mediaSession)
@@ -147,7 +145,8 @@ class ExoMediaPlayer(
         cancel()
         mediaSessionConnector.setPlayer(null)
         notificationManager.setPlayer(null)
-        player.stop(true)
+        player.stop()
+        player.clearMediaItems()
         player.release()
     }
 
@@ -167,7 +166,7 @@ class ExoMediaPlayer(
         player.seekTo(index, time?.inWholeMilliseconds ?: 0)
     }
 
-    private inner class EventListener : Player.EventListener {
+    private inner class PlayerListener : Player.Listener {
 
         override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
             if (playbackState == Player.STATE_IDLE) {
@@ -175,7 +174,7 @@ class ExoMediaPlayer(
             }
         }
 
-        override fun onPlayerError(error: ExoPlaybackException) {
+        override fun onPlayerError(error: PlaybackException) {
             var resourceException: Resource.Exception? = error.asInstance<Resource.Exception>()
             if (resourceException == null && (error.cause as? HttpDataSource.HttpDataSourceException)?.cause is UnknownHostException) {
                 resourceException = Resource.Exception.Offline
