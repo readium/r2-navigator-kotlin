@@ -23,8 +23,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import org.readium.r2.navigator.ExperimentalAudiobook
 import org.readium.r2.navigator.extensions.let
+import org.readium.r2.navigator.extensions.splitAt
 import org.readium.r2.navigator.media.extensions.publicationId
-import org.readium.r2.shared.extensions.splitAt
 import org.readium.r2.shared.fetcher.Resource
 import org.readium.r2.shared.publication.*
 import org.readium.r2.shared.publication.services.cover
