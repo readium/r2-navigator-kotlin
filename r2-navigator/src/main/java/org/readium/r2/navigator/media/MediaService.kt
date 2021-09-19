@@ -16,6 +16,7 @@ import android.os.Process
 import android.os.ResultReceiver
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaSessionCompat
+import android.widget.Toast
 import androidx.media.MediaBrowserServiceCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -30,31 +31,49 @@ import org.readium.r2.shared.publication.services.cover
 import timber.log.Timber
 import kotlin.reflect.KMutableProperty0
 
+/**
+ * [MediaBrowserServiceCompat] implementation holding the current [MediaSessionNavigator] for
+ * background playback.
+ *
+ * You should override this service in your app and declare it in your AndroidManifest.xml.
+ *
+ * See https://developer.android.com/guide/topics/media-apps/audio-app/building-a-mediabrowserservice
+ */
 @ExperimentalAudiobook
 @OptIn(ExperimentalCoroutinesApi::class)
 open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainScope() {
 
     /**
-     * @param packageName The package name of the application which is requesting access.
-     * @param uid The UID of the application which is requesting access.
+     * Creates the instance of [MediaPlayer] which will be used for playing the given [media].
+     *
+     * The default implementation uses ExoPlayer.
      */
-    open fun isClientAuthorized(packageName: String, uid: Int): Boolean =
-        (uid == Process.myUid())
-
     open fun onCreatePlayer(mediaSession: MediaSessionCompat, media: PendingMedia): MediaPlayer =
         ExoMediaPlayer(this, mediaSession, media)
 
-    open suspend fun onCreateNotificationIntent(publication: Publication, publicationId: PublicationId): PendingIntent? = null
+    /**
+     * Called when the underlying [MediaPlayer] was stopped.
+     */
+    open fun onPlayerStopped() {}
 
-    open suspend fun onCurrentLocatorChanged(publication: Publication, publicationId: PublicationId, locator: Locator) {}
+    /**
+     * Creates the [PendingIntent] which will be used to start the media activity when the user
+     * activates the media notification.
+     */
+    open suspend fun onCreateNotificationIntent(publicationId: PublicationId, publication: Publication): PendingIntent? = null
 
-    open suspend fun coverOfPublication(publication: Publication, publicationId: PublicationId): Bitmap? =
+    /**
+     * Returns the cover for the given [publication] which should be used in media notifications.
+     */
+    open suspend fun coverOfPublication(publicationId: PublicationId, publication: Publication): Bitmap? =
         publication.cover()
 
-    // We don't support any custom commands by default.
+    /**
+     * Handles a custom command delivered by [MediaSessionCompat.Callback.onCommand].
+     *
+     * @return Whether the custom command was handled.
+     */
     open fun onCommand(command: String, args: Bundle?, cb: ResultReceiver?): Boolean = false
-
-    open fun onPlayerStopped() {}
 
     /**
      * Called when a resource failed to be loaded, for example because the Internet connection
@@ -62,7 +81,16 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
      *
      * You should present the exception to the user.
      */
-    open fun onResourceLoadFailed(link: Link, error: Resource.Exception) {}
+    open fun onResourceLoadFailed(link: Link, error: Resource.Exception) {
+        Toast.makeText(this, error.getUserMessage(this), Toast.LENGTH_LONG).show()
+    }
+
+    /**
+     * @param packageName The package name of the application which is requesting access.
+     * @param uid The UID of the application which is requesting access.
+     */
+    open fun isClientAuthorized(packageName: String, uid: Int): Boolean =
+        (uid == Process.myUid())
 
     protected val mediaSession: MediaSessionCompat get() = getMediaSession(this, javaClass)
 
@@ -77,7 +105,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
                 listener = mediaPlayerListener
             }
 
-            navigator.value?.player = value
+            currentNavigator.value?.player = value
         }
 
 
@@ -87,7 +115,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
     private val mediaPlayerListener = object : MediaPlayer.Listener {
 
         override fun locatorFromMediaId(mediaId: String, extras: Bundle?): Locator? {
-            val navigator = navigator.value ?: return null
+            val navigator = currentNavigator.value ?: return null
             val (publicationId, href) = mediaId.splitAt("#")
 
             if (navigator.publicationId != publicationId) {
@@ -105,7 +133,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
         }
 
         override suspend fun coverOfPublication(publication: Publication, publicationId: PublicationId): Bitmap? =
-            this@MediaService.coverOfPublication(publication, publicationId)
+            this@MediaService.coverOfPublication(publicationId, publication)
 
         override fun onNotificationPosted(notificationId: Int, notification: Notification) {
             this@MediaService.notificationId = notificationId
@@ -118,7 +146,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
             this@MediaService.notification = null
             stopForeground(true)
 
-            if (navigator.value?.isPlaying == false) {
+            if (currentNavigator.value?.isPlaying == false) {
                 onPlayerStopped()
             }
         }
@@ -129,7 +157,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
         override fun onPlayerStopped() {
             mediaSession.publicationId = null
             player = null
-            navigator.value = null
+            currentNavigator.value = null
             this@MediaService.onPlayerStopped()
         }
 
@@ -151,35 +179,22 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
             pendingNavigator.receiveAsFlow().collect {
                 player = onCreatePlayer(mediaSession, it.media)
                 mediaSession.publicationId = it.media.publicationId
-                navigator.value = it.navigator
+                currentNavigator.value = it.navigator
             }
         }
 
         launch {
-            navigator.collect { nav ->
+            currentNavigator.collect { nav ->
                 nav?.player = player
 
                 mediaSession.setSessionActivity(
-                    nav?.let { onCreateNotificationIntent(it.publication, it.publicationId) }
+                    nav?.let { onCreateNotificationIntent(it.publicationId, it.publication) }
                 )
             }
         }
 
         launch {
-            navigator
-                .flatMapLatest { navigator ->
-                    navigator ?: return@flatMapLatest emptyFlow<Pair<MediaSessionNavigator, Locator?>>()
-                    navigator.currentLocator.map { Pair(navigator, it) }
-                }
-                .collect { (navigator, locator) ->
-                    if (locator != null) {
-                        onCurrentLocatorChanged(navigator.publication, navigator.publicationId, locator)
-                    }
-                }
-        }
-
-        launch {
-            navigator
+            currentNavigator
                 .flatMapLatest { navigator ->
                     navigator?.playback?.map { it.state }
                         ?: flowOf(MediaPlayback.State.Idle)
@@ -201,7 +216,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
 
         cancel()
         releaseMediaSession()
-        navigator.value = null
+        currentNavigator.value = null
         player = null
     }
 
@@ -227,8 +242,10 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
         @Volatile private var connection: Connection? = null
         @Volatile private var mediaSession: MediaSessionCompat? = null
 
-        private val navigator = MutableStateFlow<MediaSessionNavigator?>(null)
+        private val currentNavigator = MutableStateFlow<MediaSessionNavigator?>(null)
         private val pendingNavigator = Channel<PendingNavigator>(Channel.CONFLATED)
+
+        val navigator = currentNavigator.asStateFlow()
 
         fun connect(context: Context, serviceClass: Class<*> = MediaService::class.java): Connection =
             createIfNull(this::connection, this) {
@@ -257,12 +274,12 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
         fun getNavigator(publication: Publication, publicationId: PublicationId, initialLocator: Locator?): MediaSessionNavigator {
             context.startService(Intent(context, serviceClass))
 
-            navigator.value
+            currentNavigator.value
                 ?.takeIf { it.publicationId == publicationId }
                 ?.let { return it }
 
             val navigator = MediaSessionNavigator(publication, publicationId, getMediaSession(context, serviceClass).controller)
-            pendingNavigator.offer(PendingNavigator(
+            pendingNavigator.trySend(PendingNavigator(
                 navigator = navigator,
                 media = PendingMedia(publication, publicationId, locator = initialLocator ?: publication.readingOrder.first().toLocator())
             ))
