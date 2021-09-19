@@ -25,11 +25,8 @@ import org.readium.r2.navigator.extensions.sum
 import org.readium.r2.navigator.media.extensions.*
 import org.readium.r2.shared.publication.*
 import timber.log.Timber
-import kotlin.math.roundToInt
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
-import kotlin.time.milliseconds
-import kotlin.time.seconds
 
 /**
  * Rate at which the current locator is broadcasted during playback.
@@ -37,10 +34,13 @@ import kotlin.time.seconds
 private const val playbackPositionRefreshRate: Double = 2.0  // Hz
 
 @OptIn(ExperimentalTime::class)
-private val skipForwardInterval: Duration = 30.seconds
+private val skipForwardInterval: Duration = Duration.seconds(30)
 @OptIn(ExperimentalTime::class)
-private val skipBackwardInterval: Duration = 30.seconds
+private val skipBackwardInterval: Duration = Duration.seconds(30)
 
+/**
+ * An implementation of [MediaNavigator] using an Android's MediaSession compatible media player.
+ */
 @ExperimentalAudiobook
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
 class MediaSessionNavigator(
@@ -70,18 +70,22 @@ class MediaSessionNavigator(
      * Duration of each reading order resource.
      */
     private val durations: List<Duration?> =
-        publication.readingOrder.map { link -> link.duration?.takeIf { it > 0 }?.seconds }
+        publication.readingOrder.map { link ->
+            link.duration
+                ?.takeIf { it > 0 }
+                ?.let { Duration.seconds(it) }
+        }
 
     /**
      * Total duration of the publication.
      */
     private val totalDuration: Duration? =
-        durations.sum().takeIf { it > 0.seconds }
+        durations.sum().takeIf { it > Duration.seconds(0) }
 
 
     private val mediaMetadata = MutableStateFlow<MediaMetadataCompat?>(null)
     private val playbackState = MutableStateFlow<PlaybackStateCompat?>(null)
-    private val playbackPosition = MutableStateFlow(0.seconds)
+    private val playbackPosition = MutableStateFlow(Duration.seconds(0))
 
     init {
         controller.registerCallback(MediaControllerCallback())
@@ -102,14 +106,14 @@ class MediaSessionNavigator(
         if (!isActive) return
 
         val state = controller.playbackState
-        val newPosition = state.elapsedPosition.milliseconds
+        val newPosition = Duration.milliseconds(state.elapsedPosition)
         if (playbackPosition.value != newPosition) {
             playbackPosition.value = newPosition
         }
 
         if (state.state == PlaybackStateCompat.STATE_PLAYING) {
-            val delay = (1.0 / playbackPositionRefreshRate).seconds
-            handler.postDelayed(::updatePlaybackPosition,  delay.toLongMilliseconds())
+            val delay = Duration.seconds((1.0 / playbackPositionRefreshRate))
+            handler.postDelayed(::updatePlaybackPosition, delay.inWholeMilliseconds)
         }
     }
 
@@ -163,7 +167,7 @@ class MediaSessionNavigator(
             val duration = durations[index]
 
             locator = locator.copyWithLocations(
-                fragments = listOf("t=${position.inSeconds.roundToInt()}"),
+                fragments = listOf("t=${position.inWholeSeconds}"),
                 progression = duration?.let { position / duration },
                 totalProgression = totalDuration?.let { (startPosition + position) / totalDuration }
             )
@@ -208,12 +212,12 @@ class MediaSessionNavigator(
         combine(
             mediaMetadata.filterNotNull(),
             playbackState.filterNotNull(),
-            playbackPosition.map { it.toLongMilliseconds() }
+            playbackPosition.map { it.inWholeMilliseconds }
         ) { metadata, state, position ->
             // FIXME: Since upgrading to the latest flow version, there's a weird crash when combining a `Flow<Duration>`, like `playbackPosition`. Mapping it seems to do the trick.
             // See https://github.com/Kotlin/kotlinx.coroutines/issues/2353
             @Suppress("NAME_SHADOWING")
-            val position = position.milliseconds
+            val position = Duration.milliseconds(position)
 
             val index = metadata.resourceHref?.let { publication.readingOrder.indexOfFirstWithHref(it) }
             if (index == null) {
@@ -283,13 +287,13 @@ class MediaSessionNavigator(
         if (!isActive) return
 
         @Suppress("NAME_SHADOWING")
-        val position = position.coerceAtLeast(0.seconds)
+        val position = position.coerceAtLeast(Duration.seconds(0))
 
         // We overwrite the current position to allow skipping successively several time without
         // having to wait for the playback position to actually update.
         playbackPosition.value = position
 
-        transportControls.seekTo(position.toLongMilliseconds())
+        transportControls.seekTo(position.inWholeMilliseconds)
     }
 
     override fun seekRelative(offset: Duration) {

@@ -247,9 +247,9 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
 
         val navigator = currentNavigator.asStateFlow()
 
-        fun connect(context: Context, serviceClass: Class<*> = MediaService::class.java): Connection =
+        fun connect(serviceClass: Class<*> = MediaService::class.java): Connection =
             createIfNull(this::connection, this) {
-                Connection(context, serviceClass)
+                Connection(serviceClass)
             }
 
         private fun getMediaSession(context: Context, serviceClass: Class<*>): MediaSessionCompat =
@@ -267,11 +267,11 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
 
     }
 
-    class Connection internal constructor(private val context: Context, private val serviceClass: Class<*>) {
+    class Connection internal constructor(private val serviceClass: Class<*>) {
 
         val currentNavigator: StateFlow<MediaSessionNavigator?> get() = navigator
 
-        fun getNavigator(publication: Publication, publicationId: PublicationId, initialLocator: Locator?): MediaSessionNavigator {
+        fun getNavigator(context: Context, publication: Publication, publicationId: PublicationId, initialLocator: Locator?): MediaSessionNavigator {
             context.startService(Intent(context, serviceClass))
 
             currentNavigator.value

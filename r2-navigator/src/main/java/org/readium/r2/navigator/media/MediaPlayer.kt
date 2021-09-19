@@ -16,6 +16,10 @@ import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.PublicationId
 
+/**
+ * Media player compatible with Android's MediaSession and handling the playback for
+ * [MediaSessionNavigator].
+ */
 interface MediaPlayer {
 
     interface Listener {

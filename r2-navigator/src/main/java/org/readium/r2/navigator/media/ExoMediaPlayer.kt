@@ -45,9 +45,13 @@ import org.readium.r2.shared.publication.*
 import timber.log.Timber
 import java.io.File
 import java.net.UnknownHostException
+import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
+/**
+ * An implementation of [MediaPlayer] using ExoPlayer.
+ */
 @ExperimentalAudiobook
 @OptIn(ExperimentalTime::class)
 class ExoMediaPlayer(
@@ -114,12 +118,10 @@ class ExoMediaPlayer(
             setSmallIcon(R.drawable.exo_notification_small_icon)
             setUsePlayPauseActions(true)
             setUseStopAction(false)
-            setUseNavigationActions(false)
-            setUseNavigationActionsInCompactView(false)
             setUseChronometer(false)
             setControlDispatcher(DefaultControlDispatcher(
-                30.seconds.toLongMilliseconds(),
-                30.seconds.toLongMilliseconds()
+                Duration.seconds(30).inWholeMilliseconds,
+                Duration.seconds(30).inWholeMilliseconds
             ))
         }
 
@@ -155,9 +157,9 @@ class ExoMediaPlayer(
         val readingOrder = publication.readingOrder
         val index = readingOrder.indexOfFirstWithHref(locator.href) ?: 0
 
-        val duration = readingOrder[index].duration?.seconds
+        val duration = readingOrder[index].duration?.let { Duration.seconds(it) }
         val time = locator.locations.timeWithDuration(duration)
-        player.seekTo(index, time?.toLongMilliseconds() ?: 0)
+        player.seekTo(index, time?.inWholeMilliseconds ?: 0)
     }
 
     private inner class EventListener : Player.EventListener {
@@ -238,7 +240,7 @@ class ExoMediaPlayer(
         override fun createCurrentContentIntent(player: Player): PendingIntent? =
             controller.sessionActivity
 
-        override fun getCurrentContentText(player: Player): CharSequence? =
+        override fun getCurrentContentText(player: Player): CharSequence =
             publication.metadata.title
 
         override fun getCurrentContentTitle(player: Player): CharSequence =
@@ -265,22 +267,6 @@ class ExoMediaPlayer(
         putString(MediaMetadataCompat.METADATA_KEY_AUTHOR, publication.metadata.authors.joinToString(", ") { it.name }.takeIf { it.isNotBlank() })
         putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, publication.metadata.title)
     }.build()
-
-    companion object {
-
-        private var cache: Cache? = null
-
-        private fun getCache(context: Context): Cache =
-            createIfNull(::cache, this) {
-                SimpleCache(
-                    /* cacheDir */ File(context.externalCacheDir, "exoplayer"),
-                    NoOpCacheEvictor(),
-                    ExoDatabaseProvider(context)
-                )
-            }
-
-    }
-
 }
 
 private const val MEDIA_CHANNEL_ID = "org.readium.r2.navigator.media"
