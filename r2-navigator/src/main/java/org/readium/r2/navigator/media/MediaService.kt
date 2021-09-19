@@ -86,6 +86,9 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
     }
 
     /**
+     * Override to control which app can access the MediaSession through the MediaBrowserService.
+     * By default, only our own app can.
+     *
      * @param packageName The package name of the application which is requesting access.
      * @param uid The UID of the application which is requesting access.
      */
@@ -114,6 +117,11 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
 
     private val mediaPlayerListener = object : MediaPlayer.Listener {
 
+        /**
+         * MediaSession works with media IDs associated with a bundle of extras. We map this to
+         * a [Publication] by using for the media ID `publicationId#resourceHref`, and then putting
+         * a locator in a `locator` extra.
+         */
         override fun locatorFromMediaId(mediaId: String, extras: Bundle?): Locator? {
             val navigator = currentNavigator.value ?: return null
             val (publicationId, href) = mediaId.splitAt("#")
@@ -187,12 +195,15 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
             currentNavigator.collect { nav ->
                 nav?.player = player
 
+                // Set the activity intent to be started when the user tap on the media notification.
                 mediaSession.setSessionActivity(
                     nav?.let { onCreateNotificationIntent(it.publicationId, it.publication) }
                 )
             }
         }
 
+        // Ensure the [MediaService] won't be destroyed by Android when there's some audio playing
+        // in the background.
         launch {
             currentNavigator
                 .flatMapLatest { navigator ->
@@ -267,6 +278,12 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
 
     }
 
+    /**
+     * Connection to any running [MediaService] instance.
+     *
+     * Use a [Connection] to get a [MediaSessionNavigator] from a [Publication].
+     * It will start the service if needed.
+     */
     class Connection internal constructor(private val serviceClass: Class<*>) {
 
         val currentNavigator: StateFlow<MediaSessionNavigator?> get() = navigator

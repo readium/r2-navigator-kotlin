@@ -19,6 +19,10 @@ import org.readium.r2.shared.publication.PublicationId
 /**
  * Media player compatible with Android's MediaSession and handling the playback for
  * [MediaSessionNavigator].
+ *
+ * MediaSession works with media IDs associated with a bundle of extras. To work with
+ * [MediaService], implementers MUST map a location in the [Publication] to a media ID
+ * `publicationId#resourceHref` with a [Locator] as a `locator` extra field.
  */
 interface MediaPlayer {
 

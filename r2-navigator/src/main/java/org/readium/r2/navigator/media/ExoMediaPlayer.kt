@@ -51,6 +51,11 @@ import kotlin.time.seconds
 
 /**
  * An implementation of [MediaPlayer] using ExoPlayer.
+ *
+ * To override the button icons of the media-style notification, please refer to
+ * https://exoplayer.dev/doc/reference/com/google/android/exoplayer2/ui/PlayerNotificationManager.html
+ *
+ * In particular, you might want to override `exo_notification_rewind` and `exo_notification_fastforward`.
  */
 @ExperimentalAudiobook
 @OptIn(ExperimentalTime::class)
