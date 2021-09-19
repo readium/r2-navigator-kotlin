@@ -12,17 +12,17 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import org.readium.r2.navigator.ExperimentalAudiobook
 import org.readium.r2.navigator.MediaNavigator
 import org.readium.r2.navigator.R
-import org.readium.r2.navigator.media.*
-import org.readium.r2.shared.AudiobookNavigator
+import org.readium.r2.navigator.media.MediaService
 import org.readium.r2.shared.extensions.getPublicationOrNull
 import org.readium.r2.shared.extensions.putPublication
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.PublicationId
 
-@AudiobookNavigator
+@ExperimentalAudiobook
 open class AudioActivity : AppCompatActivity() {
 
     protected lateinit var publication: Publication

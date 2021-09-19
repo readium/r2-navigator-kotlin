@@ -17,18 +17,18 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import org.readium.r2.navigator.ExperimentalAudiobook
 import org.readium.r2.navigator.MediaNavigator
 import org.readium.r2.navigator.R
 import org.readium.r2.navigator.extensions.formatElapsedTime
 import org.readium.r2.navigator.extensions.let
 import org.readium.r2.navigator.extensions.viewById
 import org.readium.r2.navigator.util.createFragmentFactory
-import org.readium.r2.shared.AudiobookNavigator
 import org.readium.r2.shared.publication.services.cover
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
-@AudiobookNavigator
+@ExperimentalAudiobook
 @OptIn(ExperimentalTime::class)
 class AudioNavigatorFragment(
     private val mediaNavigator: MediaNavigator,

@@ -20,9 +20,9 @@ import androidx.media.MediaBrowserServiceCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+import org.readium.r2.navigator.ExperimentalAudiobook
 import org.readium.r2.navigator.extensions.let
 import org.readium.r2.navigator.media.extensions.publicationId
-import org.readium.r2.shared.AudiobookNavigator
 import org.readium.r2.shared.extensions.splitAt
 import org.readium.r2.shared.fetcher.Resource
 import org.readium.r2.shared.publication.*
@@ -30,7 +30,7 @@ import org.readium.r2.shared.publication.services.cover
 import timber.log.Timber
 import kotlin.reflect.KMutableProperty0
 
-@AudiobookNavigator
+@ExperimentalAudiobook
 @OptIn(ExperimentalCoroutinesApi::class)
 open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainScope() {
 
@@ -41,12 +41,12 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
     open fun isClientAuthorized(packageName: String, uid: Int): Boolean =
         (uid == Process.myUid())
 
-    open val navigatorActivityIntent: PendingIntent? = null
-
     open fun onCreatePlayer(mediaSession: MediaSessionCompat, media: PendingMedia): MediaPlayer =
         ExoMediaPlayer(this, mediaSession, media)
 
-    open fun onCurrentLocatorChanged(publication: Publication, publicationId: PublicationId, locator: Locator) {}
+    open suspend fun onCreateNotificationIntent(publication: Publication, publicationId: PublicationId): PendingIntent? = null
+
+    open suspend fun onCurrentLocatorChanged(publication: Publication, publicationId: PublicationId, locator: Locator) {}
 
     open suspend fun coverOfPublication(publication: Publication, publicationId: PublicationId): Bitmap? =
         publication.cover()
@@ -145,11 +145,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
         super.onCreate()
 
         sessionToken = mediaSession.sessionToken
-
-        mediaSession.run {
-            isActive = true
-            navigatorActivityIntent?.let(::setSessionActivity)
-        }
+        mediaSession.isActive = true
 
         launch {
             pendingNavigator.receiveAsFlow().collect {
@@ -160,7 +156,13 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
         }
 
         launch {
-            navigator.collect { it?.player = player }
+            navigator.collect { nav ->
+                nav?.player = player
+
+                mediaSession.setSessionActivity(
+                    nav?.let { onCreateNotificationIntent(it.publication, it.publicationId) }
+                )
+            }
         }
 
         launch {
@@ -219,8 +221,8 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
 
     companion object {
 
-        const val EVENT_PUBLICATION_CHANGED = "org.readium.r2.navigator.EVENT_PUBLICATION_CHANGED"
-        const val EXTRA_PUBLICATION_ID = "org.readium.r2.navigator.EXTRA_PUBLICATION_ID"
+        internal const val EVENT_PUBLICATION_CHANGED = "org.readium.r2.navigator.EVENT_PUBLICATION_CHANGED"
+        internal const val EXTRA_PUBLICATION_ID = "org.readium.r2.navigator.EXTRA_PUBLICATION_ID"
 
         @Volatile private var connection: Connection? = null
         @Volatile private var mediaSession: MediaSessionCompat? = null

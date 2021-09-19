@@ -6,12 +6,12 @@
 
 package org.readium.r2.navigator.media
 
-import org.readium.r2.shared.AudiobookNavigator
+import org.readium.r2.navigator.ExperimentalAudiobook
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.PublicationId
 
-@AudiobookNavigator
+@ExperimentalAudiobook
 data class PendingMedia(
     val publication: Publication,
     val publicationId: PublicationId,

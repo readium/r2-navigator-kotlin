@@ -35,10 +35,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import org.readium.r2.navigator.ExperimentalAudiobook
 import org.readium.r2.navigator.R
 import org.readium.r2.navigator.audio.PublicationDataSource
 import org.readium.r2.navigator.extensions.timeWithDuration
-import org.readium.r2.shared.AudiobookNavigator
 import org.readium.r2.shared.extensions.asInstance
 import org.readium.r2.shared.fetcher.Resource
 import org.readium.r2.shared.publication.*
@@ -48,7 +48,7 @@ import java.net.UnknownHostException
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
-@AudiobookNavigator
+@ExperimentalAudiobook
 @OptIn(ExperimentalTime::class)
 class ExoMediaPlayer(
     context: Context,
