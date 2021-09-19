@@ -63,6 +63,14 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
     open suspend fun onCreateNotificationIntent(publicationId: PublicationId, publication: Publication): PendingIntent? = null
 
     /**
+     * Creates the [MediaPlayer.NotificationMetadata] for the given resource [link].
+     *
+     * The metadata will be used for the media-style notification.
+     */
+    open fun onCreateNotificationMetadata(publicationId: PublicationId, publication: Publication, link: Link): MediaPlayer.NotificationMetadata =
+        MediaPlayer.NotificationMetadata(publication, link)
+
+    /**
      * Returns the cover for the given [publication] which should be used in media notifications.
      */
     open suspend fun coverOfPublication(publicationId: PublicationId, publication: Publication): Bitmap? =
@@ -158,6 +166,9 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
                 onPlayerStopped()
             }
         }
+
+        override fun onCreateNotificationMetadata(publication: Publication, publicationId: PublicationId, link: Link): MediaPlayer.NotificationMetadata =
+            this@MediaService.onCreateNotificationMetadata(publicationId, publication, link)
 
         override fun onCommand(command: String, args: Bundle?, cb: ResultReceiver?): Boolean =
             this@MediaService.onCommand(command, args, cb)

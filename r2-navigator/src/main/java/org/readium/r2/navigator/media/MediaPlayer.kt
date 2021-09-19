@@ -26,6 +26,18 @@ import org.readium.r2.shared.publication.PublicationId
  */
 interface MediaPlayer {
 
+    data class NotificationMetadata(
+        val publicationTitle: String?,
+        val trackTitle: String?,
+        val authors: String?
+    ) {
+        constructor(publication: Publication, link: Link) : this(
+            publicationTitle = publication.metadata.title,
+            trackTitle = link.title,
+            authors = publication.metadata.authors.joinToString(", ") { it.name }.takeIf { it.isNotBlank() }
+        )
+    }
+
     interface Listener {
 
         fun locatorFromMediaId(mediaId: String, extras: Bundle?): Locator?
@@ -44,6 +56,12 @@ interface MediaPlayer {
          */
         fun onResourceLoadFailed(link: Link, error: Resource.Exception)
 
+        /**
+         * Creates the [NotificationMetadata] for the given resource [link].
+         *
+         * The metadata will be used for the media-style notification.
+         */
+        fun onCreateNotificationMetadata(publication: Publication, publicationId: PublicationId, link: Link): NotificationMetadata
     }
 
     // FIXME: ExoPlayer's media session connector doesn't handle the playback speed yet, so I used a custom solution until we create our own connector

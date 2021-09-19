@@ -261,13 +261,18 @@ class ExoMediaPlayer(
 
     }
 
-    private fun createMediaMetadata(link: Link) = MediaMetadataCompat.Builder().apply {
-        putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, "${publicationId}#${link.href}")
-        putString(MediaMetadataCompat.METADATA_KEY_TITLE, link.title)
-        putString(MediaMetadataCompat.METADATA_KEY_ALBUM, publication.metadata.title)
-        putString(MediaMetadataCompat.METADATA_KEY_AUTHOR, publication.metadata.authors.joinToString(", ") { it.name }.takeIf { it.isNotBlank() })
-        putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, publication.metadata.title)
-    }.build()
+    private fun createMediaMetadata(link: Link): MediaMetadataCompat {
+        val metadata = listener?.onCreateNotificationMetadata(publication, publicationId, link)
+            ?: MediaPlayer.NotificationMetadata(publication, link)
+
+        return MediaMetadataCompat.Builder()
+            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, "${publicationId}#${link.href}")
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, metadata.trackTitle)
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, metadata.publicationTitle)
+            .putString(MediaMetadataCompat.METADATA_KEY_AUTHOR, metadata.authors)
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, metadata.publicationTitle)
+            .build()
+    }
 }
 
 private const val MEDIA_CHANNEL_ID = "org.readium.r2.navigator.media"
