@@ -14,11 +14,8 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaControllerCompat.TransportControls
 import android.support.v4.media.session.PlaybackStateCompat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import org.readium.r2.navigator.ExperimentalAudiobook
 import org.readium.r2.navigator.MediaNavigator
 import org.readium.r2.navigator.extensions.sum
@@ -59,9 +56,8 @@ class MediaSessionNavigator(
     // FIXME: ExoPlayer's media session connector doesn't handle the playback speed yet, so we need the player instance for now
     internal var player: MediaPlayer? = null
 
-    private val handler = Handler(Looper.getMainLooper())
-
     private var playWhenReady: Boolean = false
+    private var positionBroadcastJob: Job? = null
 
     private val needsPlaying: Boolean get() =
         playWhenReady && !controller.playbackState.isPlaying
@@ -100,20 +96,21 @@ class MediaSessionNavigator(
     private val transportControls: TransportControls get() = controller.transportControls
 
     /**
-     * Observes recursively the playback position, as long as it is playing.
+     * Broadcasts the playback position, as long the media is still playing.
      */
-    private fun updatePlaybackPosition() {
-        if (!isActive) return
+    private fun broadcastPlaybackPosition() {
+        positionBroadcastJob?.cancel()
+        positionBroadcastJob = launch {
+            var state = controller.playbackState
+            while (isActive && state.state == PlaybackStateCompat.STATE_PLAYING) {
+                val newPosition = Duration.milliseconds(state.elapsedPosition)
+                if (playbackPosition.value != newPosition) {
+                    playbackPosition.value = newPosition
+                }
 
-        val state = controller.playbackState
-        val newPosition = Duration.milliseconds(state.elapsedPosition)
-        if (playbackPosition.value != newPosition) {
-            playbackPosition.value = newPosition
-        }
-
-        if (state.state == PlaybackStateCompat.STATE_PLAYING) {
-            val delay = Duration.seconds((1.0 / playbackPositionRefreshRate))
-            handler.postDelayed(::updatePlaybackPosition, delay.inWholeMilliseconds)
+                delay(Duration.seconds((1.0 / playbackPositionRefreshRate)))
+                state = controller.playbackState
+            }
         }
     }
 
@@ -133,7 +130,7 @@ class MediaSessionNavigator(
             playbackState.value = state
             if (state?.state == PlaybackState.STATE_PLAYING) {
                 playWhenReady = false
-                updatePlaybackPosition()
+                broadcastPlaybackPosition()
             }
         }
 
