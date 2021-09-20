@@ -11,7 +11,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.os.Build
 import android.os.Bundle
 import android.os.Process
 import android.os.ResultReceiver
@@ -278,12 +277,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
 
         private fun getMediaSession(context: Context, serviceClass: Class<*>): MediaSessionCompat =
             createIfNull(this::mediaSession, this) {
-                var flags = 0
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    flags = flags or PendingIntent.FLAG_IMMUTABLE
-                }
-                val intent = PendingIntent.getBroadcast(context, 0, Intent(Intent.ACTION_MEDIA_BUTTON), flags)
-                MediaSessionCompat(context, /* log tag */ serviceClass.simpleName, null, intent)
+                MediaSessionCompat(context, /* log tag */ serviceClass.simpleName)
             }
 
         private fun releaseMediaSession() {
