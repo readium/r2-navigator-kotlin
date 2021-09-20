@@ -213,11 +213,10 @@ class MediaSessionNavigator(
             mediaMetadata.filterNotNull(),
             playbackState.filterNotNull(),
             playbackPosition.map { it.inWholeMilliseconds }
-        ) { metadata, state, position ->
+        ) { metadata, state, positionMs ->
             // FIXME: Since upgrading to the latest flow version, there's a weird crash when combining a `Flow<Duration>`, like `playbackPosition`. Mapping it seems to do the trick.
             // See https://github.com/Kotlin/kotlinx.coroutines/issues/2353
-            @Suppress("NAME_SHADOWING")
-            val position = Duration.milliseconds(position)
+            val position = Duration.milliseconds(positionMs)
 
             val index = metadata.resourceHref?.let { publication.readingOrder.indexOfFirstWithHref(it) }
             if (index == null) {
