@@ -6,6 +6,7 @@
 
 package org.readium.r2.navigator.media
 
+import org.readium.r2.navigator.ExperimentalAudiobook
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
@@ -17,6 +18,7 @@ import kotlin.time.ExperimentalTime
  * @param timeline Position and duration of the current resource.
  */
 @OptIn(ExperimentalTime::class)
+@ExperimentalAudiobook
 data class MediaPlayback(val state: State, val rate: Double, val timeline: Timeline) {
 
     enum class State {

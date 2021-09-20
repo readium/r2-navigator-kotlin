@@ -141,6 +141,7 @@ fun VisualNavigator.goRight(animated: Boolean = false, completion: () -> Unit = 
  * A navigator rendering an audio or video publication.
  */
 @OptIn(ExperimentalTime::class)
+@ExperimentalAudiobook
 interface MediaNavigator : Navigator {
 
     /**
