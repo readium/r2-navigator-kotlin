@@ -221,6 +221,7 @@ open class MediaService : MediaBrowserServiceCompat(), CoroutineScope by MainSco
                     navigator?.playback?.map { it.state }
                         ?: flowOf(MediaPlayback.State.Idle)
                 }
+                .distinctUntilChanged()
                 .collect {
                     if (it.isPlaying) {
                         let(notificationId, notification) { id, note ->
