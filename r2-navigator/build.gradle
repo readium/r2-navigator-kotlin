@@ -15,6 +15,7 @@ group='com.github.readium'
 
 android {
     compileSdkVersion 30
+
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 30
