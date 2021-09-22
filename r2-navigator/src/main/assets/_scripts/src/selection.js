@@ -9,7 +9,7 @@ import { toNativeRect } from "./rect";
 import { TextRange } from "./vendor/hypothesis/anchoring/text-range";
 
 // Polyfill for Android API 26
-const matchAll = require("string.prototype.matchall");
+import matchAll from "string.prototype.matchall";
 matchAll.shim();
 
 const debug = true;
